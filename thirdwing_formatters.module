@@ -129,6 +129,11 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'badge_datum_en_tijd' => array(
+      'label' => t('Badge datum en tijd'),
+      'field types' => array('date', 'datestamp', 'datetime'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -206,6 +211,9 @@ function thirdwing_formatters_theme() {
       'arguments' => array('element' => NULL),
     ),
     'thirdwing_formatters_formatter_badge_plain' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_datum_en_tijd' => array(
       'arguments' => array('element' => NULL),
     ),
   );
@@ -313,7 +321,14 @@ function theme_thirdwing_formatters_formatter_badge_nummer($element) {
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($element) {
   if (!empty($element['#item']['nid'])) {
-    $referenced_node = node_load($element['#item']['nid']);
+    $nid = $element['#item']['nid'];
+    
+    // Use static cache to avoid loading the same node multiple times
+    static $node_cache = array();
+    if (!isset($node_cache[$nid])) {
+      $node_cache[$nid] = node_load($nid);
+    }
+    $referenced_node = $node_cache[$nid];
     
     if ($referenced_node && isset($referenced_node->field_audio_nummer[0]['value']) && isset($referenced_node->field_audio_seizoen[0]['value'])) {
       $audio_nummer = $referenced_node->field_audio_nummer[0]['value'];
@@ -401,15 +416,24 @@ function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
 function theme_thirdwing_formatters_formatter_badge_location($element) {
   $nid = $element['#item']['nid'];
   
-  if ($nid && $node = node_load($nid)) {
-    $title = check_plain($node->title);
-    $field_value = '';
-    
-    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
-      $field_value = check_plain($node->field_l_plaats[0]['value']);
+  if ($nid) {
+    // Use static cache to avoid loading the same node multiple times
+    static $node_cache = array();
+    if (!isset($node_cache[$nid])) {
+      $node_cache[$nid] = node_load($nid);
     }
+    $node = $node_cache[$nid];
     
-    return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . $title . '</span> <span class="badge-location-plaats">' . $field_value . '</span></span>';
+    if ($node) {
+      $title = check_plain($node->title);
+      $field_value = '';
+      
+      if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
+        $field_value = check_plain($node->field_l_plaats[0]['value']);
+      }
+      
+      return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . $title . '</span> <span class="badge-location-plaats">' . $field_value . '</span></span>';
+    }
   }
   
   return '';
@@ -428,51 +452,60 @@ function theme_thirdwing_formatters_formatter_badge_location($element) {
 function theme_thirdwing_formatters_formatter_badge_location_extended($element) {
   $nid = $element['#item']['nid'];
   
-  if ($nid && $node = node_load($nid)) {
-    $title = check_plain($node->title);
-    $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker"><span class="badge-location-title">' . $title . '</span>';
-    
-    // Get field_l_adres
-    if (isset($node->field_l_adres) && !empty($node->field_l_adres[0]['value'])) {
-      $adres = check_plain($node->field_l_adres[0]['value']);
-      $output .= '<span class="badge-location-adres">' . $adres . '</span>';
+  if ($nid) {
+    // Use static cache to avoid loading the same node multiple times
+    static $node_cache = array();
+    if (!isset($node_cache[$nid])) {
+      $node_cache[$nid] = node_load($nid);
     }
+    $node = $node_cache[$nid];
     
-    // Get field_l_postcode and field_l_plaats
-    $postcode = '';
-    if (isset($node->field_l_postcode) && !empty($node->field_l_postcode[0]['value'])) {
-      $postcode = check_plain($node->field_l_postcode[0]['value']);
-    }
-    
-    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
-      $plaats = check_plain($node->field_l_plaats[0]['value']);
-      $output .= '<span class="badge-location-plaats">' . $postcode . ' ' . $plaats . '</span>';
-    }
-    
-    // Get field_l_routelink (link field with multiple values)
-    $routelinks = array();
-    if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
-      foreach ($node->field_l_routelink as $link_item) {
-        if (!empty($link_item['url'])) {
-          $link_url = check_url($link_item['url']);
-          $link_title = !empty($link_item['title']) ? check_plain($link_item['title']) : $link_url;
-          $routelinks[] = '<a href="' . $link_url . '">' . $link_title . '</a>';
+    if ($node) {
+      $title = check_plain($node->title);
+      $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker"><span class="badge-location-title">' . $title . '</span>';
+      
+      // Get field_l_adres
+      if (isset($node->field_l_adres) && !empty($node->field_l_adres[0]['value'])) {
+        $adres = check_plain($node->field_l_adres[0]['value']);
+        $output .= '<span class="badge-location-adres">' . $adres . '</span>';
+      }
+      
+      // Get field_l_postcode and field_l_plaats
+      $postcode = '';
+      if (isset($node->field_l_postcode) && !empty($node->field_l_postcode[0]['value'])) {
+        $postcode = check_plain($node->field_l_postcode[0]['value']);
+      }
+      
+      if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
+        $plaats = check_plain($node->field_l_plaats[0]['value']);
+        $output .= '<span class="badge-location-plaats">' . $postcode . ' ' . $plaats . '</span>';
+      }
+      
+      // Get field_l_routelink (link field with multiple values)
+      $routelinks = array();
+      if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
+        foreach ($node->field_l_routelink as $link_item) {
+          if (!empty($link_item['url'])) {
+            $link_url = check_url($link_item['url']);
+            $link_title = !empty($link_item['title']) ? check_plain($link_item['title']) : $link_url;
+            $routelinks[] = '<a href="' . $link_url . '">' . $link_title . '</a>';
+          }
+        }
+        if (!empty($routelinks)) {
+          $output .= '<span class="badge-location-link">' . implode(' | ', $routelinks) . '</span>';
         }
       }
-      if (!empty($routelinks)) {
-        $output .= '<span class="badge-location-link">' . implode(' | ', $routelinks) . '</span>';
+      
+      // Get field_l_bijzonderheden from the current node (not the referenced node)
+      $current_node = $element['#node'];
+      if (isset($current_node->field_l_bijzonderheden) && !empty($current_node->field_l_bijzonderheden[0]['value'])) {
+        $bijzonderheden = check_plain($current_node->field_l_bijzonderheden[0]['value']);
+        $output .= '<span class="badge-location-bijzonderheden">' . $bijzonderheden . '</span>';
       }
+      
+      $output .= '</span>';
+      return $output;
     }
-    
-    // Get field_l_bijzonderheden from the current node (not the referenced node)
-    $current_node = $element['#node'];
-    if (isset($current_node->field_l_bijzonderheden) && !empty($current_node->field_l_bijzonderheden[0]['value'])) {
-      $bijzonderheden = check_plain($current_node->field_l_bijzonderheden[0]['value']);
-      $output .= '<span class="badge-location-bijzonderheden">' . $bijzonderheden . '</span>';
-    }
-    
-    $output .= '</span>';
-    return $output;
   }
   
   return '';
@@ -896,6 +929,81 @@ function theme_thirdwing_formatters_formatter_badge_plain($element) {
   }
   $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
   return '<div class="badge">' . $value . '</div>';
+}
+
+/**
+ * Format a date field as a date and time badge.
+ * 
+ * Displays date with day, month, year and optionally time if not 00:00.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $date = $element['#item']['value'];
+  $dt = new DateTime($date);
+  
+  // Dutch day names (short)
+  $dutch_days = array(
+    'Mon' => 'ma',
+    'Tue' => 'di',
+    'Wed' => 'wo',
+    'Thu' => 'do',
+    'Fri' => 'vr',
+    'Sat' => 'za',
+    'Sun' => 'zo',
+  );
+  
+  // Dutch month names (short)
+  $dutch_months = array(
+    'Jan' => 'jan',
+    'Feb' => 'feb',
+    'Mar' => 'mrt',
+    'Apr' => 'apr',
+    'May' => 'mei',
+    'Jun' => 'jun',
+    'Jul' => 'jul',
+    'Aug' => 'aug',
+    'Sep' => 'sep',
+    'Oct' => 'okt',
+    'Nov' => 'nov',
+    'Dec' => 'dec',
+  );
+  
+  // Format date parts
+  $day_short_en = $dt->format('D'); // English short day
+  $month_en = $dt->format('M'); // English short month
+  
+  $day_short = isset($dutch_days[$day_short_en]) ? $dutch_days[$day_short_en] : $day_short_en;
+  $day = $dt->format('d'); // Day number (01-31)
+  $month = isset($dutch_months[$month_en]) ? $dutch_months[$month_en] : $month_en;
+  $year = $dt->format('Y'); // Year (2024)
+  $time = $dt->format('H:i'); // Time (14:30)
+  
+  // Build output
+  $output = '<span class="badge badge-date-wrapper">';
+  $output .= '<span class="badge badge-date fa fa-calendar" title="Datum">';
+  $output .= '<span class="badge-day-short">' . $day_short . '</span>';
+  $output .= '<span class="badge-day">' . $day . '</span>';
+  $output .= '<span class="badge-month">' . $month . '</span>';
+  $output .= '<span class="badge-year">' . $year . '</span>';
+  $output .= '</span>';
+  
+  // Add time badge only if not midnight
+  if ($time != '00:00') {
+    $output .= '<span class="badge badge-time fa fa-clock-o" title="Begintijd">' . $time . '</span>';
+  }
+  
+  $output .= '</span>';
+  
+  return $output;
 }
 
 /**
