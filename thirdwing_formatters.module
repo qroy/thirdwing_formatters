@@ -39,6 +39,16 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('text'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'badge_location' => array(
+      'label' => t('Badge location'),
+      'field types' => array('nodereference'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_location_extended' => array(
+      'label' => t('Badge location (uitgebreid)'),
+      'field types' => array('nodereference'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -62,6 +72,12 @@ function thirdwing_formatters_theme() {
       'arguments' => array('element' => NULL),
     ),
     'thirdwing_formatters_formatter_badge_koorfunctie' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_location' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_location_extended' => array(
       'arguments' => array('element' => NULL),
     ),
   );
@@ -219,6 +235,96 @@ function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
   
   if ($key) {
     return '<span class="badge badge-functie badge-functie-' . check_plain($value) . '" title="' . check_plain($key) . '">' . check_plain($key) . '</span>';
+  }
+  
+  return '';
+}
+
+/**
+ * Format a node reference as a location badge (basic).
+ * 
+ * Displays location title and plaats from the referenced node.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_location($element) {
+  $nid = $element['#item']['nid'];
+  
+  if ($nid && $node = node_load($nid)) {
+    $title = check_plain($node->title);
+    $field_value = '';
+    
+    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
+      $field_value = check_plain($node->field_l_plaats[0]['value']);
+    }
+    
+    return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . $title . '</span> <span class="badge-location-plaats">' . $field_value . '</span></span>';
+  }
+  
+  return '';
+}
+
+/**
+ * Format a node reference as a location badge (extended).
+ * 
+ * Displays full location details including address, postcode, plaats, route links, and notes.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_location_extended($element) {
+  $nid = $element['#item']['nid'];
+  
+  if ($nid && $node = node_load($nid)) {
+    $title = check_plain($node->title);
+    $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker"><span class="badge-location-title">' . $title . '</span>';
+    
+    // Get field_l_adres
+    if (isset($node->field_l_adres) && !empty($node->field_l_adres[0]['value'])) {
+      $adres = check_plain($node->field_l_adres[0]['value']);
+      $output .= '<span class="badge-location-adres">' . $adres . '</span>';
+    }
+    
+    // Get field_l_postcode and field_l_plaats
+    $postcode = '';
+    if (isset($node->field_l_postcode) && !empty($node->field_l_postcode[0]['value'])) {
+      $postcode = check_plain($node->field_l_postcode[0]['value']);
+    }
+    
+    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
+      $plaats = check_plain($node->field_l_plaats[0]['value']);
+      $output .= '<span class="badge-location-plaats">' . $postcode . ' ' . $plaats . '</span>';
+    }
+    
+    // Get field_l_routelink (link field with multiple values)
+    $routelinks = array();
+    if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
+      foreach ($node->field_l_routelink as $link_item) {
+        if (!empty($link_item['url'])) {
+          $link_url = check_url($link_item['url']);
+          $link_title = !empty($link_item['title']) ? check_plain($link_item['title']) : $link_url;
+          $routelinks[] = '<a href="' . $link_url . '">' . $link_title . '</a>';
+        }
+      }
+      if (!empty($routelinks)) {
+        $output .= '<span class="badge-location-link">' . implode(' | ', $routelinks) . '</span>';
+      }
+    }
+    
+    // Get field_l_bijzonderheden from the current node (not the referenced node)
+    $current_node = $element['#node'];
+    if (isset($current_node->field_l_bijzonderheden) && !empty($current_node->field_l_bijzonderheden[0]['value'])) {
+      $bijzonderheden = check_plain($current_node->field_l_bijzonderheden[0]['value']);
+      $output .= '<span class="badge-location-bijzonderheden">' . $bijzonderheden . '</span>';
+    }
+    
+    $output .= '</span>';
+    return $output;
   }
   
   return '';
