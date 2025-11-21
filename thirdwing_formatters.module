@@ -49,6 +49,86 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('nodereference'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'datum_met_icoon' => array(
+      'label' => t('Datum met icoon'),
+      'field types' => array('date', 'datestamp', 'datetime'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_sleepgroep' => array(
+      'label' => t('Badge sleepgroep'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_tijd' => array(
+      'label' => t('Badge tijd'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_band' => array(
+      'label' => t('Badge band'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'file_description_link' => array(
+      'label' => t('File description link'),
+      'field types' => array('filefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_year' => array(
+      'label' => t('Badge year'),
+      'field types' => array('date', 'datestamp', 'datetime'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_red' => array(
+      'label' => t('Badge (rood)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_blue' => array(
+      'label' => t('Badge (blauw)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_grey_light' => array(
+      'label' => t('Badge (lichtgrijs)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_orange' => array(
+      'label' => t('Badge (oranje)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_green' => array(
+      'label' => t('Badge (groen)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_grey_dark' => array(
+      'label' => t('Badge (donkergrijs)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_grey' => array(
+      'label' => t('Badge (grijs)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_purple' => array(
+      'label' => t('Badge (paars)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_yellow' => array(
+      'label' => t('Badge (geel)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_plain' => array(
+      'label' => t('Badge (zonder kleur)'),
+      'field types' => array('text', 'number_integer', 'number_decimal', 'number_float'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -80,6 +160,54 @@ function thirdwing_formatters_theme() {
     'thirdwing_formatters_formatter_badge_location_extended' => array(
       'arguments' => array('element' => NULL),
     ),
+    'thirdwing_formatters_formatter_datum_met_icoon' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_sleepgroep' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_tijd' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_band' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_file_description_link' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_year' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_red' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_blue' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_grey_light' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_orange' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_green' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_grey_dark' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_grey' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_purple' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_yellow' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_plain' => array(
+      'arguments' => array('element' => NULL),
+    ),
   );
 }
 
@@ -97,6 +225,11 @@ function thirdwing_formatters_theme() {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
+  // Check if field is empty
+  if (empty($element['#item']['safe'])) {
+    return '';
+  }
+  
   $output = $element['#item']['safe'];
   
   // Map field names to their corresponding year fields
@@ -131,6 +264,11 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
+  // Check if field is empty
+  if (!isset($element['#item']['value']) || $element['#item']['value'] === '') {
+    return '';
+  }
+  
   $value = $element['#item']['value'];
   
   // Get the node path
@@ -153,6 +291,11 @@ function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_nummer($element) {
+  // Check if field is empty
+  if (!isset($element['#item']['value']) || $element['#item']['value'] === '') {
+    return '';
+  }
+  
   $value = $element['#item']['value'];
   
   return '<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>';
@@ -195,6 +338,11 @@ function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($elemen
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
   $value = $element['#item']['value'];
   $key = '';
   
@@ -328,6 +476,426 @@ function theme_thirdwing_formatters_formatter_badge_location_extended($element) 
   }
   
   return '';
+}
+
+/**
+ * Format a date field with contextual icon.
+ * 
+ * Displays different icons based on the field name:
+ * - field_lidsinds: user-plus icon, shows "Aspirant" if date is in the future
+ * - field_geboortedatum: birthday-cake icon
+ * - field_uitkoor: user-times icon
+ * - default: calendar icon
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_datum_met_icoon($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $date = $element['#item']['value'];
+  $field_name = $element['#field_name'];
+  
+  // Determine icon and title based on field name
+  if ($field_name == 'field_lidsinds') {
+    $icon = 'user-plus';
+    $title = 'Lid sinds';
+  }
+  elseif ($field_name == 'field_geboortedatum') {
+    $icon = 'birthday-cake';
+    $title = 'Geboortedatum';
+  }
+  elseif ($field_name == 'field_uitkoor') {
+    $icon = 'user-times';
+    $title = 'Uit het koor per';
+  }
+  else {
+    $icon = 'calendar';
+    $title = 'Datum';
+  }
+  
+  // Parse the date
+  $dt = new DateTime($date);
+  $now = new DateTime();
+  
+  // Special handling for field_lidsinds in the future
+  if ($dt > $now && $field_name == 'field_lidsinds') {
+    return '<span class="fa fa-' . $icon . ' aspirant" title="' . check_plain($title) . '">Aspirant</span>';
+  }
+  else {
+    // Format the date as dd-mm-yyyy
+    $formatted_date = $dt->format('d-m-Y');
+    return '<span class="fa fa-' . $icon . '" title="' . check_plain($title) . '">' . $formatted_date . '</span>';
+  }
+}
+
+/**
+ * Format a text field as a sleepgroep badge.
+ * 
+ * Converts numeric values to Roman numerals and special codes.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_sleepgroep($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $value = $element['#item']['value'];
+  
+  // Convert values to display format
+  if ($value == 1) { 
+    $value = 'I'; 
+  }
+  elseif ($value == 2) { 
+    $value = 'II'; 
+  }
+  elseif ($value == 3) { 
+    $value = 'III'; 
+  }
+  elseif ($value == 4) { 
+    $value = 'IV'; 
+  }
+  elseif ($value == 5) { 
+    $value = 'V'; 
+  }
+  elseif ($value == 8) { 
+    $value = 'OG'; 
+  }
+  elseif ($value == 9) { 
+    $value = '-'; 
+  }
+  
+  return '<span class="badge badge-sleepgroep" title="Sleepgroep ' . check_plain($value) . '">' . check_plain($value) . '</span>';
+}
+
+/**
+ * Format a text field as a tijd badge with contextual styling.
+ * 
+ * Shows different icons and classes based on the field name:
+ * - field_tijd_aanwezig: users icon with "Koor aanwezig" title
+ * - field_sleepgroep_aanwezig: users icon with "Koor aanwezig" title
+ * - other fields: clock icon with "Tijd" title
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_tijd($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $value = check_plain($element['#item']['value']);
+  $field_name = $element['#field_name'];
+  
+  // Determine styling based on field name
+  if ($field_name == 'field_tijd_aanwezig') {
+    return '<span class="badge badge-koor-tijd fa fa-users" title="Koor aanwezig">' . $value . '</span>';
+  }
+  elseif ($field_name == 'field_sleepgroep_aanwezig') {
+    return '<span class="badge badge-sleepgroep-tijd fa fa-clock-o" title="Sleepgroep aanwezig">' . $value . '</span>';
+  }
+  else {
+    return '<span class="badge badge-tijd fa fa-clock-o" title="Tijd">' . $value . '</span>';
+  }
+}
+
+/**
+ * Format a text field as a band member badge.
+ * 
+ * Shows band instrument icons with status indicators based on field name and value.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_band($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $value = $element['#item']['value'];
+  $fieldname = $element['#field_name'];
+  
+  // Determine instrument type based on field name
+  if ($fieldname == 'field_keyboard') { 
+    $combo = 't'; 
+    $icon = '&#xe00b;'; 
+    $naam = 'toetsenist'; 
+  }
+  elseif ($fieldname == 'field_gitaar') { 
+    $combo = 'g'; 
+    $icon = '&#xe00a;'; 
+    $naam = 'gitarist'; 
+  }
+  elseif ($fieldname == 'field_basgitaar') { 
+    $combo = 'b'; 
+    $icon = '&#xe008;'; 
+    $naam = 'basgitarist'; 
+  }
+  elseif ($fieldname == 'field_drums') { 
+    $combo = 'd'; 
+    $icon = '&#xe009;'; 
+    $naam = 'drummer'; 
+  }
+  elseif ($fieldname == 'field_percussie') { 
+    $combo = 'p'; 
+    $icon = '&#xe00c;'; 
+    $naam = 'percusionist'; 
+  }
+  else {
+    return '';
+  }
+  
+  // Determine status based on value
+  if ($value == '+') { 
+    $status = 'aanwezig'; 
+    $uitleg = 'De vaste ' . $naam . ' is aanwezig.';
+  }
+  elseif ($value == '?') { 
+    $status = 'vraag'; 
+    $uitleg = 'Het is nog niet bekend of de vaste ' . $naam . ' aanwezig is.';
+  }
+  elseif ($value == '-') { 
+    $status = 'afwezig'; 
+    $uitleg = 'De vaste ' . $naam . ' is afwezig.'; 
+  }
+  elseif ($value == 'v') { 
+    $status = 'vervanging'; 
+    $uitleg = 'Er is vervanging voor de vaste ' . $naam . ' aanwezig.'; 
+  }
+  else {
+    return '';
+  }
+  
+  return '<span class="badge badge-combo badge-combo-' . $combo . ' badge-combo-' . $status . '" title="' . check_plain($uitleg) . '">' . $icon . '</span>';
+}
+
+/**
+ * Format a file field displaying the description as a link with file icon.
+ * 
+ * Shows file description (or filename if no description) as a button link with
+ * FontAwesome icon based on file extension.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_file_description_link($element) {
+  // Check if field is empty
+  if (empty($element['#item']['filepath'])) {
+    return '';
+  }
+  
+  $file = $element['#item'];
+  $filepath = $file['filepath'];
+  $url = file_create_url($filepath);
+  
+  // Get description or fallback to filename
+  $description = !empty($file['data']['description']) ? check_plain($file['data']['description']) : basename($filepath);
+  
+  // Get filename for title attribute
+  $filename = basename($filepath);
+  
+  // Get file extension
+  $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+  
+  // Map common extensions to FontAwesome file icons
+  $icon_map = array(
+    'pdf' => 'pdf',
+    'doc' => 'word',
+    'docx' => 'word',
+    'xls' => 'excel',
+    'xlsx' => 'excel',
+    'ppt' => 'powerpoint',
+    'pptx' => 'powerpoint',
+    'zip' => 'archive',
+    'rar' => 'archive',
+    'tar' => 'archive',
+    'gz' => 'archive',
+    'jpg' => 'image',
+    'jpeg' => 'image',
+    'png' => 'image',
+    'gif' => 'image',
+    'mp3' => 'audio',
+    'wav' => 'audio',
+    'ogg' => 'audio',
+    'mp4' => 'video',
+    'avi' => 'video',
+    'mov' => 'video',
+    'txt' => 'text',
+    'csv' => 'text',
+    'mscz' => 'audio',
+    'mscx' => 'audio',
+    'musicxml' => 'audio',
+    'mid' => 'audio',
+    'midi' => 'audio',
+  );
+  
+  // Determine icon class - for unknown types, just use 'o' which will become 'file-o'
+  $icon_type = isset($icon_map[$extension]) ? $icon_map[$extension] : 'o';
+  
+  // Build the full icon class
+  $icon_class = ($icon_type == 'o') ? 'button fa fa-file-o' : 'button fa fa-file-' . $icon_type . '-o';
+  
+  return l($description, $url, array(
+    'attributes' => array(
+      'class' => $icon_class,
+      'target' => '_blank',
+      'title' => check_plain($filename),
+    ),
+    'html' => FALSE,
+  ));
+}
+
+/**
+ * Format a date field as a year badge.
+ * 
+ * Displays only the year from a date field in a red badge.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_year($element) {
+  // Check if field is empty
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $date = $element['#item']['value'];
+  $dt = new DateTime($date);
+  
+  // Format as year only
+  $year = $dt->format('Y');
+  
+  return '<div class="badge badge-color-red">' . $year . '</div>';
+}
+
+/**
+ * Format a field as a red badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_red($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-red">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a blue badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_blue($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-blue">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a light grey badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_grey_light($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-grey-light">' . $value . '</div>';
+}
+
+/**
+ * Format a field as an orange badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_orange($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-orange">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a green badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_green($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-green">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a dark grey badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_grey_dark($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-grey-dark">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a grey badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_grey($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-grey">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a purple badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_purple($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-purple">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a yellow badge.
+ */
+function theme_thirdwing_formatters_formatter_badge_yellow($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge badge-color-yellow">' . $value . '</div>';
+}
+
+/**
+ * Format a field as a plain badge (no color).
+ */
+function theme_thirdwing_formatters_formatter_badge_plain($element) {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  return '<div class="badge">' . $value . '</div>';
 }
 
 /**
