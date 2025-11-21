@@ -1,0 +1,6 @@
+name = Thirdwing Custom Formatters
+description = Custom CCK field formatters for thirdwing.nl
+core = 6.x
+package = Thirdwing
+dependencies[] = content
+version = 6.x-1.0

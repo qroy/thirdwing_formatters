@@ -1,0 +1,149 @@
+<?php
+/**
+ * @file
+ * Custom field formatters for Thirdwing site
+ * 
+ * Provides custom CCK field formatters that were previously defined
+ * through the custom_formatters module.
+ */
+
+/**
+ * Implementation of hook_field_formatter_info().
+ * 
+ * Register custom formatters with CCK.
+ */
+function thirdwing_formatters_field_formatter_info() {
+  return array(
+    'repertoire_met_jaar' => array(
+      'label' => t('Repertoire met jaar'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    // Example formatter - replace with your actual formatters
+    'custom_link' => array(
+      'label' => t('Custom Link Formatter'),
+      'field types' => array('text', 'link'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'image_thumbnail' => array(
+      'label' => t('Custom Image Thumbnail'),
+      'field types' => array('filefield', 'imagefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    // Add more formatters here
+  );
+}
+
+/**
+ * Implementation of hook_theme().
+ * 
+ * Register theme functions for formatters.
+ */
+function thirdwing_formatters_theme() {
+  return array(
+    'thirdwing_formatters_formatter_repertoire_met_jaar' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_custom_link' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_image_thumbnail' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    // Add more theme functions here
+  );
+}
+
+/**
+ * Format a repertoire field with corresponding year field appended in parentheses.
+ * 
+ * Automatically detects the correct year field based on the current field name:
+ * - field_rep_arrangeur -> field_rep_arr_jaar
+ * - field_rep_componist -> field_rep_componist_jaar
+ * - field_rep_uitvoering -> field_rep_uitv_jaar
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
+  $output = $element['#item']['safe'];
+  
+  // Map field names to their corresponding year fields
+  $year_field_map = array(
+    'field_rep_arr' => 'field_rep_arr_jaar',
+    'field_rep_componist' => 'field_rep_componist_jaar',
+    'field_rep_uitv' => 'field_rep_uitv_jaar',
+  );
+  
+  // Get the current field name
+  $field_name = $element['#field_name'];
+  
+  // Check if we have a year field mapping for this field
+  if (isset($year_field_map[$field_name])) {
+    $year_field = $year_field_map[$field_name];
+    
+    // Append the year if it exists
+    if (isset($element['#node']->{$year_field}[0]['value']) && !empty($element['#node']->{$year_field}[0]['value'])) {
+      $output .= ' (' . check_plain($element['#node']->{$year_field}[0]['value']) . ')';
+    }
+  }
+  
+  return $output;
+}
+
+/**
+ * Format a field using the custom link formatter.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_custom_link($element) {
+  $output = '';
+  
+  if (!empty($element['#item']['value'])) {
+    $value = check_plain($element['#item']['value']);
+    $url = $element['#item']['value'];
+    
+    // Add your custom formatting logic here
+    $output = l($value, $url, array('attributes' => array('class' => 'custom-link')));
+  }
+  
+  return $output;
+}
+
+/**
+ * Format a field using the custom image thumbnail formatter.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_image_thumbnail($element) {
+  $output = '';
+  
+  if (!empty($element['#item']['filepath'])) {
+    $filepath = $element['#item']['filepath'];
+    
+    // Add your custom image formatting logic here
+    $output = theme('image', $filepath, '', '', array('class' => 'custom-thumbnail'));
+  }
+  
+  return $output;
+}
+
+/**
+ * Implementation of hook_content_is_empty().
+ * 
+ * CCK uses this to determine if a field value is empty.
+ */
+function thirdwing_formatters_content_is_empty($item, $field) {
+  if (empty($item['value'])) {
+    return TRUE;
+  }
+  return FALSE;
+}
