@@ -19,18 +19,26 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('text'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
-    // Example formatter - replace with your actual formatters
-    'custom_link' => array(
-      'label' => t('Custom Link Formatter'),
-      'field types' => array('text', 'link'),
+    'badge_nummer_link' => array(
+      'label' => t('Badge nummer (met link)'),
+      'field types' => array('number_integer'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
-    'image_thumbnail' => array(
-      'label' => t('Custom Image Thumbnail'),
-      'field types' => array('filefield', 'imagefield'),
+    'badge_nummer' => array(
+      'label' => t('Badge nummer (zonder link)'),
+      'field types' => array('number_integer'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
-    // Add more formatters here
+    'badge_nummer_nodereference' => array(
+      'label' => t('Badge nummer (node reference)'),
+      'field types' => array('nodereference'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'badge_koorfunctie' => array(
+      'label' => t('Badge koorfunctie'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -44,13 +52,18 @@ function thirdwing_formatters_theme() {
     'thirdwing_formatters_formatter_repertoire_met_jaar' => array(
       'arguments' => array('element' => NULL),
     ),
-    'thirdwing_formatters_formatter_custom_link' => array(
+    'thirdwing_formatters_formatter_badge_nummer_link' => array(
       'arguments' => array('element' => NULL),
     ),
-    'thirdwing_formatters_formatter_image_thumbnail' => array(
+    'thirdwing_formatters_formatter_badge_nummer' => array(
       'arguments' => array('element' => NULL),
     ),
-    // Add more theme functions here
+    'thirdwing_formatters_formatter_badge_nummer_nodereference' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_badge_koorfunctie' => array(
+      'arguments' => array('element' => NULL),
+    ),
   );
 }
 
@@ -58,9 +71,9 @@ function thirdwing_formatters_theme() {
  * Format a repertoire field with corresponding year field appended in parentheses.
  * 
  * Automatically detects the correct year field based on the current field name:
- * - field_rep_arrangeur -> field_rep_arr_jaar
+ * - field_rep_arr -> field_rep_arr_jaar
  * - field_rep_componist -> field_rep_componist_jaar
- * - field_rep_uitvoering -> field_rep_uitv_jaar
+ * - field_rep_uitv -> field_rep_uitv_jaar
  * 
  * @param $element
  *   The field element to format.
@@ -94,46 +107,121 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
 }
 
 /**
- * Format a field using the custom link formatter.
+ * Format an integer field as a badge with link to the node.
  * 
  * @param $element
  *   The field element to format.
  * @return
  *   The formatted output.
  */
-function theme_thirdwing_formatters_formatter_custom_link($element) {
-  $output = '';
+function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
+  $value = $element['#item']['value'];
   
-  if (!empty($element['#item']['value'])) {
-    $value = check_plain($element['#item']['value']);
-    $url = $element['#item']['value'];
+  // Get the node path
+  if (isset($element['#node']->nid)) {
+    $node_path = 'node/' . $element['#node']->nid;
     
-    // Add your custom formatting logic here
-    $output = l($value, $url, array('attributes' => array('class' => 'custom-link')));
+    return l('<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>', $node_path, array('html' => TRUE));
   }
   
-  return $output;
+  // Fallback if no node context
+  return '<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>';
 }
 
 /**
- * Format a field using the custom image thumbnail formatter.
+ * Format an integer field as a badge without link.
  * 
  * @param $element
  *   The field element to format.
  * @return
  *   The formatted output.
  */
-function theme_thirdwing_formatters_formatter_image_thumbnail($element) {
-  $output = '';
+function theme_thirdwing_formatters_formatter_badge_nummer($element) {
+  $value = $element['#item']['value'];
   
-  if (!empty($element['#item']['filepath'])) {
-    $filepath = $element['#item']['filepath'];
+  return '<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>';
+}
+
+/**
+ * Format a node reference field as badge nummer with seizoen.
+ * 
+ * Displays the field_audio_nummer and field_audio_seizoen from the referenced node.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($element) {
+  if (!empty($element['#item']['nid'])) {
+    $referenced_node = node_load($element['#item']['nid']);
     
-    // Add your custom image formatting logic here
-    $output = theme('image', $filepath, '', '', array('class' => 'custom-thumbnail'));
+    if ($referenced_node && isset($referenced_node->field_audio_nummer[0]['value']) && isset($referenced_node->field_audio_seizoen[0]['value'])) {
+      $audio_nummer = $referenced_node->field_audio_nummer[0]['value'];
+      $audio_type = check_plain($referenced_node->field_audio_seizoen[0]['value']);
+      $node_url = url('node/' . $referenced_node->nid);
+      
+      return '<a href="' . $node_url . '"><div class="badge badge-nummer">' . check_plain($audio_nummer) . '</div></a><div class="badge badge-color-grey-light">' . $audio_type . '</div>';
+    }
   }
   
-  return $output;
+  return '';
+}
+
+/**
+ * Format a text field as a choir function badge.
+ * 
+ * Converts function codes to full names and displays them as badges.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
+  $value = $element['#item']['value'];
+  $key = '';
+  
+  // Map function codes to labels
+  if ($value == 'A') { 
+    $key = 'Tenor'; 
+  }
+  elseif ($value == 'B') { 
+    $key = 'Bas'; 
+  }
+  elseif ($value == 'C') { 
+    $key = '1e Sopraan'; 
+  }
+  elseif ($value == 'D') { 
+    $key = '2e Sopraan'; 
+  }
+  elseif ($value == 'E') { 
+    $key = 'Alt'; 
+  }
+  elseif ($value == 'Y1') { 
+    $key = 'Dirigent'; 
+  }
+  elseif ($value == 'Z1') { 
+    $key = 'Toetsenist'; 
+  }
+  elseif ($value == 'Z2') { 
+    $key = 'Gitarist'; 
+  }
+  elseif ($value == 'Z3') { 
+    $key = 'Bassist'; 
+  }
+  elseif ($value == 'Z4') { 
+    $key = 'Drummer'; 
+  }
+  elseif ($value == 'Z5') { 
+    $key = 'Percussionist'; 
+  }
+  
+  if ($key) {
+    return '<span class="badge badge-functie badge-functie-' . check_plain($value) . '" title="' . check_plain($key) . '">' . check_plain($key) . '</span>';
+  }
+  
+  return '';
 }
 
 /**
