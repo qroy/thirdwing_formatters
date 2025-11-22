@@ -4,7 +4,7 @@
  * Custom field formatters for Thirdwing site
  * 
  * Provides custom CCK field formatters that were previously defined
- * through the custom_formatters module.
+ * through the custom_formatters module, plus a pseudo-field for media counts.
  */
 
 /**
@@ -216,6 +216,9 @@ function thirdwing_formatters_theme() {
     'thirdwing_formatters_formatter_badge_datum_en_tijd' => array(
       'arguments' => array('element' => NULL),
     ),
+    'thirdwing_formatters_media_counts_display' => array(
+      'arguments' => array('counts' => NULL, 'nid' => NULL),
+    ),
   );
 }
 
@@ -233,11 +236,6 @@ function thirdwing_formatters_theme() {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
-  // Check if field is empty
-  if (empty($element['#item']['safe'])) {
-    return '';
-  }
-  
   $output = $element['#item']['safe'];
   
   // Map field names to their corresponding year fields
@@ -272,11 +270,6 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
-  // Check if field is empty
-  if (!isset($element['#item']['value']) || $element['#item']['value'] === '') {
-    return '';
-  }
-  
   $value = $element['#item']['value'];
   
   // Get the node path
@@ -299,11 +292,6 @@ function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_nummer($element) {
-  // Check if field is empty
-  if (!isset($element['#item']['value']) || $element['#item']['value'] === '') {
-    return '';
-  }
-  
   $value = $element['#item']['value'];
   
   return '<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>';
@@ -320,23 +308,26 @@ function theme_thirdwing_formatters_formatter_badge_nummer($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($element) {
-  if (!empty($element['#item']['nid'])) {
-    $nid = $element['#item']['nid'];
+  if (empty($element['#item']['nid'])) {
+    return '';
+  }
+  
+  // Use static caching for node references
+  static $node_cache = array();
+  $nid = $element['#item']['nid'];
+  
+  if (!isset($node_cache[$nid])) {
+    $node_cache[$nid] = node_load($nid);
+  }
+  
+  $referenced_node = $node_cache[$nid];
+  
+  if ($referenced_node && isset($referenced_node->field_audio_nummer[0]['value']) && isset($referenced_node->field_audio_seizoen[0]['value'])) {
+    $audio_nummer = $referenced_node->field_audio_nummer[0]['value'];
+    $audio_type = check_plain($referenced_node->field_audio_seizoen[0]['value']);
+    $node_url = url('node/' . $referenced_node->nid);
     
-    // Use static cache to avoid loading the same node multiple times
-    static $node_cache = array();
-    if (!isset($node_cache[$nid])) {
-      $node_cache[$nid] = node_load($nid);
-    }
-    $referenced_node = $node_cache[$nid];
-    
-    if ($referenced_node && isset($referenced_node->field_audio_nummer[0]['value']) && isset($referenced_node->field_audio_seizoen[0]['value'])) {
-      $audio_nummer = $referenced_node->field_audio_nummer[0]['value'];
-      $audio_type = check_plain($referenced_node->field_audio_seizoen[0]['value']);
-      $node_url = url('node/' . $referenced_node->nid);
-      
-      return '<a href="' . $node_url . '"><div class="badge badge-nummer">' . check_plain($audio_nummer) . '</div></a><div class="badge badge-color-grey-light">' . $audio_type . '</div>';
-    }
+    return '<a href="' . $node_url . '"><div class="badge badge-nummer">' . check_plain($audio_nummer) . '</div></a><div class="badge badge-color-grey-light">' . $audio_type . '</div>';
   }
   
   return '';
@@ -353,11 +344,6 @@ function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($elemen
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
-  // Check if field is empty
-  if (empty($element['#item']['value'])) {
-    return '';
-  }
-  
   $value = $element['#item']['value'];
   $key = '';
   
@@ -414,26 +400,29 @@ function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_location($element) {
+  if (empty($element['#item']['nid'])) {
+    return '';
+  }
+  
+  // Use static caching for node references
+  static $node_cache = array();
   $nid = $element['#item']['nid'];
   
-  if ($nid) {
-    // Use static cache to avoid loading the same node multiple times
-    static $node_cache = array();
-    if (!isset($node_cache[$nid])) {
-      $node_cache[$nid] = node_load($nid);
-    }
-    $node = $node_cache[$nid];
+  if (!isset($node_cache[$nid])) {
+    $node_cache[$nid] = node_load($nid);
+  }
+  
+  $node = $node_cache[$nid];
+  
+  if ($node) {
+    $title = check_plain($node->title);
+    $field_value = '';
     
-    if ($node) {
-      $title = check_plain($node->title);
-      $field_value = '';
-      
-      if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
-        $field_value = check_plain($node->field_l_plaats[0]['value']);
-      }
-      
-      return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . $title . '</span> <span class="badge-location-plaats">' . $field_value . '</span></span>';
+    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
+      $field_value = check_plain($node->field_l_plaats[0]['value']);
     }
+    
+    return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . $title . '</span> <span class="badge-location-plaats">' . $field_value . '</span></span>';
   }
   
   return '';
@@ -450,62 +439,65 @@ function theme_thirdwing_formatters_formatter_badge_location($element) {
  *   The formatted output.
  */
 function theme_thirdwing_formatters_formatter_badge_location_extended($element) {
+  if (empty($element['#item']['nid'])) {
+    return '';
+  }
+  
+  // Use static caching for node references
+  static $node_cache = array();
   $nid = $element['#item']['nid'];
   
-  if ($nid) {
-    // Use static cache to avoid loading the same node multiple times
-    static $node_cache = array();
-    if (!isset($node_cache[$nid])) {
-      $node_cache[$nid] = node_load($nid);
-    }
-    $node = $node_cache[$nid];
+  if (!isset($node_cache[$nid])) {
+    $node_cache[$nid] = node_load($nid);
+  }
+  
+  $node = $node_cache[$nid];
+  
+  if ($node) {
+    $title = check_plain($node->title);
+    $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker"><span class="badge-location-title">' . $title . '</span>';
     
-    if ($node) {
-      $title = check_plain($node->title);
-      $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker"><span class="badge-location-title">' . $title . '</span>';
-      
-      // Get field_l_adres
-      if (isset($node->field_l_adres) && !empty($node->field_l_adres[0]['value'])) {
-        $adres = check_plain($node->field_l_adres[0]['value']);
-        $output .= '<span class="badge-location-adres">' . $adres . '</span>';
-      }
-      
-      // Get field_l_postcode and field_l_plaats
-      $postcode = '';
-      if (isset($node->field_l_postcode) && !empty($node->field_l_postcode[0]['value'])) {
-        $postcode = check_plain($node->field_l_postcode[0]['value']);
-      }
-      
-      if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
-        $plaats = check_plain($node->field_l_plaats[0]['value']);
-        $output .= '<span class="badge-location-plaats">' . $postcode . ' ' . $plaats . '</span>';
-      }
-      
-      // Get field_l_routelink (link field with multiple values)
-      $routelinks = array();
-      if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
-        foreach ($node->field_l_routelink as $link_item) {
-          if (!empty($link_item['url'])) {
-            $link_url = check_url($link_item['url']);
-            $link_title = !empty($link_item['title']) ? check_plain($link_item['title']) : $link_url;
-            $routelinks[] = '<a href="' . $link_url . '">' . $link_title . '</a>';
-          }
-        }
-        if (!empty($routelinks)) {
-          $output .= '<span class="badge-location-link">' . implode(' | ', $routelinks) . '</span>';
-        }
-      }
-      
-      // Get field_l_bijzonderheden from the current node (not the referenced node)
-      $current_node = $element['#node'];
-      if (isset($current_node->field_l_bijzonderheden) && !empty($current_node->field_l_bijzonderheden[0]['value'])) {
-        $bijzonderheden = check_plain($current_node->field_l_bijzonderheden[0]['value']);
-        $output .= '<span class="badge-location-bijzonderheden">' . $bijzonderheden . '</span>';
-      }
-      
-      $output .= '</span>';
-      return $output;
+    // Get field_l_adres
+    if (isset($node->field_l_adres) && !empty($node->field_l_adres[0]['value'])) {
+      $adres = check_plain($node->field_l_adres[0]['value']);
+      $output .= '<span class="badge-location-adres">' . $adres . '</span>';
     }
+    
+    // Get field_l_postcode and field_l_plaats
+    $postcode = '';
+    if (isset($node->field_l_postcode) && !empty($node->field_l_postcode[0]['value'])) {
+      $postcode = check_plain($node->field_l_postcode[0]['value']);
+    }
+    
+    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
+      $plaats = check_plain($node->field_l_plaats[0]['value']);
+      $output .= '<span class="badge-location-plaats">' . $postcode . ' ' . $plaats . '</span>';
+    }
+    
+    // Get field_l_routelink (link field with multiple values)
+    $routelinks = array();
+    if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
+      foreach ($node->field_l_routelink as $link_item) {
+        if (!empty($link_item['url'])) {
+          $link_url = check_url($link_item['url']);
+          $link_title = !empty($link_item['title']) ? check_plain($link_item['title']) : $link_url;
+          $routelinks[] = '<a href="' . $link_url . '">' . $link_title . '</a>';
+        }
+      }
+      if (!empty($routelinks)) {
+        $output .= '<span class="badge-location-link">' . implode(' | ', $routelinks) . '</span>';
+      }
+    }
+    
+    // Get field_l_bijzonderheden from the current node (not the referenced node)
+    $current_node = $element['#node'];
+    if (isset($current_node->field_l_bijzonderheden) && !empty($current_node->field_l_bijzonderheden[0]['value'])) {
+      $bijzonderheden = check_plain($current_node->field_l_bijzonderheden[0]['value']);
+      $output .= '<span class="badge-location-bijzonderheden">' . $bijzonderheden . '</span>';
+    }
+    
+    $output .= '</span>';
+    return $output;
   }
   
   return '';
@@ -1016,4 +1008,363 @@ function thirdwing_formatters_content_is_empty($item, $field) {
     return TRUE;
   }
   return FALSE;
+}
+
+// ============================================================================
+// PSEUDO-FIELD: Media Counts
+// Display Suite / Node Display Compatible
+// ============================================================================
+
+/**
+ * Implementation of hook_content_extra_fields()
+ * 
+ * This registers the pseudo-field with CCK so it appears in
+ * "Display fields" configuration and Display Suite.
+ */
+function thirdwing_formatters_content_extra_fields($type_name) {
+  $extras = array();
+  
+  // Only add to repertoire content type
+  if ($type_name == 'repertoire') {
+    $extras['media_counts'] = array(
+      'label' => t('Media Counts'),
+      'description' => t('Audio and video recording counts'),
+      'weight' => 10,
+      'visible' => TRUE,
+    );
+  }
+  
+  return $extras;
+}
+
+/**
+ * Implementation of hook_content_build_modes()
+ * This ensures the field is available in all build modes
+ */
+function thirdwing_formatters_content_build_modes() {
+  return array(
+    'full' => array(
+      'title' => t('Full node'),
+      'build modes' => array(
+        'full' => array(
+          'title' => t('Full node'),
+          'views style' => FALSE,
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_nodeapi()
+ * 
+ * Attach the media counts to the node during rendering and handle cache clearing.
+ */
+function thirdwing_formatters_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'load':
+      // Add a flag so we know this field is available
+      if ($node->type == 'repertoire') {
+        $node->_thirdwing_media_counts_available = TRUE;
+      }
+      break;
+      
+    case 'view':
+      if ($node->type == 'repertoire') {
+        // Get the counts with caching
+        $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+        
+        // Only add to node content if there are actually counts to display
+        if (!empty($counts['audio']) || !empty($counts['video'])) {
+          $node->content['media_counts'] = array(
+            '#value' => theme('thirdwing_formatters_media_counts_display', $counts, $node->nid),
+            '#weight' => 10, // Default weight, can be changed in Display settings
+          );
+        }
+        else {
+          // Add empty value so the field still appears in display settings
+          $node->content['media_counts'] = array(
+            '#value' => '',
+            '#weight' => 10,
+          );
+        }
+      }
+      break;
+      
+    case 'insert':
+    case 'update':
+    case 'delete':
+      // Clear cache when audio/video nodes are modified
+      if (in_array($node->type, array('audio', 'video'))) {
+        // Clear cache for the referenced repertoire node
+        if (isset($node->field_repertoire[0]['nid'])) {
+          $repertoire_nid = $node->field_repertoire[0]['nid'];
+          $cache_key = 'repertoire_media_counts_' . $repertoire_nid;
+          cache_clear_all($cache_key, 'cache');
+        }
+      }
+      break;
+  }
+}
+
+/**
+ * Theme function to display media counts
+ */
+function theme_thirdwing_formatters_media_counts_display($counts, $nid) {
+  if (empty($counts['audio']) && empty($counts['video'])) {
+    return '';
+  }
+  
+  $output = '<div class="media-counts-wrapper">';
+  
+  if ($counts['audio'] > 0) {
+    $output .= l(
+      $counts['audio'] . ' Audio opnamen', 
+      'node/' . $nid, 
+      array(
+        'attributes' => array(
+          'class' => 'button fa fa-file-audio-o',
+        ),
+        'fragment' => 'audio', // Optional: adds #audio anchor
+      )
+    );
+  }
+  
+  if ($counts['video'] > 0) {
+    $output .= l(
+      $counts['video'] . ' Video opnamen', 
+      'node/' . $nid, 
+      array(
+        'attributes' => array(
+          'class' => 'button fa fa-file-video-o',
+        ),
+        'fragment' => 'video', // Optional: adds #video anchor
+      )
+    );
+  }
+  
+  $output .= '</div>';
+  
+  return $output;
+}
+
+/**
+ * Helper function to get counts with multiple caching layers
+ */
+function thirdwing_formatters_get_media_counts_for_display($nid) {
+  // Layer 1: Static cache (for same page request)
+  static $static_cache = array();
+  
+  if (isset($static_cache[$nid])) {
+    return $static_cache[$nid];
+  }
+  
+  // Check global cache from Views preload
+  global $thirdwing_media_counts_cache;
+  if (isset($thirdwing_media_counts_cache[$nid])) {
+    $static_cache[$nid] = $thirdwing_media_counts_cache[$nid];
+    return $thirdwing_media_counts_cache[$nid];
+  }
+  
+  // Layer 2: Drupal cache (persistent across requests)
+  $cache_key = 'repertoire_media_counts_' . $nid;
+  $cached = cache_get($cache_key, 'cache');
+  
+  if ($cached && !empty($cached->data)) {
+    $static_cache[$nid] = $cached->data;
+    return $cached->data;
+  }
+  
+  // Layer 3: Database query
+  $counts = _thirdwing_formatters_get_media_counts($nid);
+  
+  // Cache for 1 hour (3600 seconds)
+  cache_set($cache_key, $counts, 'cache', time() + 3600);
+  $static_cache[$nid] = $counts;
+  
+  return $counts;
+}
+
+/**
+ * Internal function to query database for counts
+ */
+function _thirdwing_formatters_get_media_counts($nid) {
+  $reference_field = 'field_repertoire';
+  $leden_tid = 28;
+  
+  $query = "
+    SELECT n.type, COUNT(DISTINCT n.nid) as count
+    FROM {node} n
+    INNER JOIN {content_" . $reference_field . "} cr ON n.nid = cr.nid
+    INNER JOIN {term_node} tn ON n.nid = tn.nid
+    WHERE cr." . $reference_field . "_nid = %d
+      AND n.status = 1
+      AND n.type IN ('audio', 'video')
+      AND tn.tid = %d
+    GROUP BY n.type
+  ";
+  
+  $result = db_query($query, $nid, $leden_tid);
+  $counts = array('audio' => 0, 'video' => 0);
+  
+  while ($row = db_fetch_object($result)) {
+    $counts[$row->type] = $row->count;
+  }
+  
+  return $counts;
+}
+
+// ============================================================================
+// PERFORMANCE: Batch preloading for Views
+// ============================================================================
+
+/**
+ * Implementation of hook_views_pre_render()
+ * Preload all counts before rendering to avoid N+1 query problem
+ */
+function thirdwing_formatters_views_pre_render(&$view) {
+  // Only process views that might contain repertoire nodes
+  if (!empty($view->result)) {
+    $nids = array();
+    
+    foreach ($view->result as $result) {
+      // Handle different result structures
+      $node_type = isset($result->node_type) ? $result->node_type : 
+                   (isset($result->type) ? $result->type : NULL);
+      
+      if ($node_type == 'repertoire' && isset($result->nid)) {
+        $nids[] = $result->nid;
+      }
+    }
+    
+    if (!empty($nids)) {
+      // Batch load all counts
+      $all_counts = thirdwing_formatters_preload_media_counts($nids);
+      
+      // Store in global variable so individual formatters can access them
+      global $thirdwing_media_counts_cache;
+      if (!isset($thirdwing_media_counts_cache)) {
+        $thirdwing_media_counts_cache = array();
+      }
+      $thirdwing_media_counts_cache = array_merge($thirdwing_media_counts_cache, $all_counts);
+    }
+  }
+}
+
+/**
+ * Batch preload function - fetches counts for multiple nodes at once
+ */
+function thirdwing_formatters_preload_media_counts($nids) {
+  if (empty($nids)) {
+    return array();
+  }
+  
+  $reference_field = 'field_repertoire';
+  $leden_tid = 28;
+  
+  // Build placeholders for IN clause
+  $placeholders = db_placeholders($nids);
+  
+  // Single query to get all counts
+  $query = "
+    SELECT cr." . $reference_field . "_nid as repertoire_nid, 
+           n.type, 
+           COUNT(DISTINCT n.nid) as count
+    FROM {node} n
+    INNER JOIN {content_" . $reference_field . "} cr ON n.nid = cr.nid
+    INNER JOIN {term_node} tn ON n.nid = tn.nid
+    WHERE cr." . $reference_field . "_nid IN (" . $placeholders . ")
+      AND n.status = 1
+      AND n.type IN ('audio', 'video')
+      AND tn.tid = %d
+    GROUP BY cr." . $reference_field . "_nid, n.type
+  ";
+  
+  // Merge nids and taxonomy term for query args
+  $args = array_merge($nids, array($leden_tid));
+  $result = db_query($query, $args);
+  
+  // Process results
+  $counts = array();
+  while ($row = db_fetch_object($result)) {
+    if (!isset($counts[$row->repertoire_nid])) {
+      $counts[$row->repertoire_nid] = array('audio' => 0, 'video' => 0);
+    }
+    $counts[$row->repertoire_nid][$row->type] = $row->count;
+  }
+  
+  // Fill in zeros for repertoire nodes with no media
+  foreach ($nids as $nid) {
+    if (!isset($counts[$nid])) {
+      $counts[$nid] = array('audio' => 0, 'video' => 0);
+    }
+  }
+  
+  return $counts;
+}
+
+// ============================================================================
+// Display Suite Integration
+// ============================================================================
+
+/**
+ * Implementation of hook_ds_fields()
+ * Registers the field with Display Suite
+ */
+function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
+  if ($type_name == 'repertoire') {
+    $fields = array();
+    
+    $fields['media_counts'] = array(
+      'title' => t('Media Counts'),
+      'type' => DS_FIELD_TYPE_FUNCTION,
+      'status' => DS_FIELD_STATUS_STATIC,
+      'properties' => array(
+        'function' => 'thirdwing_formatters_ds_render_media_counts',
+        'formatters' => array(
+          'default' => t('Default (buttons)'),
+        ),
+      ),
+    );
+    
+    return array('node' => $fields);
+  }
+  
+  return array();
+}
+
+/**
+ * Render callback for Display Suite
+ */
+function thirdwing_formatters_ds_render_media_counts($field) {
+  // DS in Drupal 6 can pass the field info in different ways
+  // Try to get the node object
+  $node = NULL;
+  
+  if (is_object($field) && isset($field->nid)) {
+    // Direct node object
+    $node = $field;
+  }
+  elseif (is_array($field)) {
+    if (isset($field['object'])) {
+      // DS2 format
+      $node = $field['object'];
+    }
+    elseif (isset($field['node'])) {
+      // Alternative format
+      $node = $field['node'];
+    }
+  }
+  
+  if (!$node || !isset($node->nid)) {
+    return '';
+  }
+  
+  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+  
+  if (empty($counts['audio']) && empty($counts['video'])) {
+    return '';
+  }
+  
+  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
 }
