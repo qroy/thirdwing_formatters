@@ -716,6 +716,8 @@ function theme_thirdwing_formatters_formatter_badge_band($element) {
  * Shows file description (or filename if no description) as a button link with
  * FontAwesome icon based on file extension.
  * 
+ * OPTIMIZED: Skips file_create_url() filesystem checks for better performance
+ * 
  * @param $element
  *   The field element to format.
  * @return
@@ -729,13 +731,15 @@ function theme_thirdwing_formatters_formatter_file_description_link($element) {
   
   $file = $element['#item'];
   $filepath = $file['filepath'];
-  $url = file_create_url($filepath);
+  
+  // PERFORMANCE FIX: Build URL manually instead of file_create_url()
+  // file_create_url() does slow filesystem checks (stat, file_exists, etc)
+  global $base_url;
+  $url = $base_url . '/' . ltrim($filepath, '/');
   
   // Get description or fallback to filename
-  $description = !empty($file['data']['description']) ? check_plain($file['data']['description']) : basename($filepath);
-  
-  // Get filename for title attribute
   $filename = basename($filepath);
+  $description = !empty($file['data']['description']) ? check_plain($file['data']['description']) : $filename;
   
   // Get file extension
   $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
@@ -787,6 +791,7 @@ function theme_thirdwing_formatters_formatter_file_description_link($element) {
     'html' => FALSE,
   ));
 }
+
 
 /**
  * Format a date field as a year badge.
