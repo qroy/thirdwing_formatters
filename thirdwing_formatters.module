@@ -713,10 +713,7 @@ function theme_thirdwing_formatters_formatter_badge_band($element) {
 /**
  * Format a file field displaying the description as a link with file icon.
  * 
- * Shows file description (or filename if no description) as a button link with
- * FontAwesome icon based on file extension.
- * 
- * OPTIMIZED: Skips file_create_url() filesystem checks for better performance
+ * Optimized for multiple files per field - no filesystem operations.
  * 
  * @param $element
  *   The field element to format.
@@ -732,64 +729,67 @@ function theme_thirdwing_formatters_formatter_file_description_link($element) {
   $file = $element['#item'];
   $filepath = $file['filepath'];
   
-  // PERFORMANCE FIX: Build URL manually instead of file_create_url()
-  // file_create_url() does slow filesystem checks (stat, file_exists, etc)
+  // Build URL directly - no filesystem checks
   global $base_url;
   $url = $base_url . '/' . ltrim($filepath, '/');
   
-  // Get description or fallback to filename
-  $filename = basename($filepath);
+  // Quick basename without function call overhead
+  $pos = strrpos($filepath, '/');
+  $filename = ($pos !== FALSE) ? substr($filepath, $pos + 1) : $filepath;
+  
+  // Get description or use filename
   $description = !empty($file['data']['description']) ? check_plain($file['data']['description']) : $filename;
   
-  // Get file extension
-  $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+  // Quick extension detection
+  $pos = strrpos($filename, '.');
+  $extension = ($pos !== FALSE) ? strtolower(substr($filename, $pos + 1)) : '';
   
-  // Map common extensions to FontAwesome file icons
-  $icon_map = array(
-    'pdf' => 'pdf',
-    'doc' => 'word',
-    'docx' => 'word',
-    'xls' => 'excel',
-    'xlsx' => 'excel',
-    'ppt' => 'powerpoint',
-    'pptx' => 'powerpoint',
-    'zip' => 'archive',
-    'rar' => 'archive',
-    'tar' => 'archive',
-    'gz' => 'archive',
-    'jpg' => 'image',
-    'jpeg' => 'image',
-    'png' => 'image',
-    'gif' => 'image',
-    'mp3' => 'audio',
-    'wav' => 'audio',
-    'ogg' => 'audio',
-    'mp4' => 'video',
-    'avi' => 'video',
-    'mov' => 'video',
-    'txt' => 'text',
-    'csv' => 'text',
-    'mscz' => 'audio',
-    'mscx' => 'audio',
-    'musicxml' => 'audio',
-    'mid' => 'audio',
-    'midi' => 'audio',
-  );
+  // Minimal icon mapping - only common types
+  switch ($extension) {
+    case 'pdf':
+      $icon = 'fa-file-pdf-o';
+      break;
+    case 'doc':
+    case 'docx':
+      $icon = 'fa-file-word-o';
+      break;
+    case 'xls':
+    case 'xlsx':
+      $icon = 'fa-file-excel-o';
+      break;
+    case 'zip':
+    case 'rar':
+    case 'tar':
+    case 'gz':
+      $icon = 'fa-file-archive-o';
+      break;
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+      $icon = 'fa-file-image-o';
+      break;
+    case 'mp3':
+    case 'wav':
+    case 'ogg':
+    case 'mscz':
+    case 'mscx':
+    case 'mid':
+    case 'midi':
+      $icon = 'fa-file-audio-o';
+      break;
+    case 'mp4':
+    case 'avi':
+    case 'mov':
+      $icon = 'fa-file-video-o';
+      break;
+    default:
+      $icon = 'fa-file-o';
+  }
   
-  // Determine icon class - for unknown types, just use 'o' which will become 'file-o'
-  $icon_type = isset($icon_map[$extension]) ? $icon_map[$extension] : 'o';
-  
-  // Build the full icon class
-  $icon_class = ($icon_type == 'o') ? 'button fa fa-file-o' : 'button fa fa-file-' . $icon_type . '-o';
-  
-  return l($description, $url, array(
-    'attributes' => array(
-      'class' => $icon_class,
-      'target' => '_blank',
-      'title' => check_plain($filename),
-    ),
-    'html' => FALSE,
-  ));
+  // Return simple HTML without l() function overhead
+  return '<a href="' . check_url($url) . '" class="button fa ' . $icon . '" target="_blank" title="' . 
+    check_plain($filename) . '">' . $description . '</a>';
 }
 
 
