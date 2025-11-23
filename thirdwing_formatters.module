@@ -134,11 +134,6 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('date', 'datestamp', 'datetime'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
-    'media_counts' => array(
-      'label' => t('Media Counts (optimized)'),
-      'field types' => array('code'),
-      'multiple values' => CONTENT_HANDLE_CORE,
-    ),
   );
 }
 
@@ -219,9 +214,6 @@ function thirdwing_formatters_theme() {
       'arguments' => array('element' => NULL),
     ),
     'thirdwing_formatters_formatter_badge_datum_en_tijd' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_media_counts' => array(
       'arguments' => array('element' => NULL),
     ),
     'thirdwing_formatters_media_counts_display' => array(
@@ -1007,37 +999,6 @@ function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
 }
 
 /**
- * Format a code field as media counts display.
- * 
- * This formatter ignores the code field content and instead displays
- * audio/video counts for the current repertoire node.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
- */
-function theme_thirdwing_formatters_formatter_media_counts($element) {
-  // Get the node from element
-  if (!isset($element['#node']) || !isset($element['#node']->nid)) {
-    return '';
-  }
-  
-  $node = $element['#node'];
-  
-  // Only works for repertoire nodes
-  if ($node->type != 'repertoire') {
-    return '';
-  }
-  
-  // Get the counts with caching
-  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
-  
-  // Return themed output
-  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
-}
-
-/**
  * Implementation of hook_content_is_empty().
  * 
  * CCK uses this to determine if a field value is empty.
@@ -1268,68 +1229,3 @@ function thirdwing_formatters_preload_media_counts($nids) {
   return $counts;
 }
 
-// ============================================================================
-// Display Suite Integration
-// ============================================================================
-
-/**
- * Implementation of hook_ds_fields()
- * Registers the field with Display Suite
- */
-function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
-  if ($type_name == 'repertoire') {
-    $fields = array();
-    
-    $fields['media_counts'] = array(
-      'title' => t('Media Counts'),
-      'type' => DS_FIELD_TYPE_FUNCTION,
-      'status' => DS_FIELD_STATUS_STATIC,
-      'properties' => array(
-        'function' => 'thirdwing_formatters_ds_render_media_counts',
-        'formatters' => array(
-          'default' => t('Default (buttons)'),
-        ),
-      ),
-    );
-    
-    return array('node' => $fields);
-  }
-  
-  return array();
-}
-
-/**
- * Render callback for Display Suite
- */
-function thirdwing_formatters_ds_render_media_counts($field) {
-  // DS in Drupal 6 can pass the field info in different ways
-  // Try to get the node object
-  $node = NULL;
-  
-  if (is_object($field) && isset($field->nid)) {
-    // Direct node object
-    $node = $field;
-  }
-  elseif (is_array($field)) {
-    if (isset($field['object'])) {
-      // DS2 format
-      $node = $field['object'];
-    }
-    elseif (isset($field['node'])) {
-      // Alternative format
-      $node = $field['node'];
-    }
-  }
-  
-  if (!$node || !isset($node->nid)) {
-    return '';
-  }
-  
-  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
-  
-  if (empty($counts['audio']) && empty($counts['video'])) {
-    return '';
-  }
-  
-  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
-}
