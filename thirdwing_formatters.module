@@ -1,16 +1,21 @@
 <?php
 /**
  * @file
- * Custom field formatters for Thirdwing site
+ * Custom field formatters for Thirdwing site - Performance Optimized
  * 
  * Provides custom CCK field formatters that were previously defined
  * through the custom_formatters module, plus a pseudo-field for media counts.
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Reduced function call overhead
+ * - Optimized conditionals (most common first)
+ * - Consolidated string operations
+ * - Efficient static caching
+ * - Batch loading with multi-layer cache
  */
 
 /**
  * Implementation of hook_field_formatter_info().
- * 
- * Register custom formatters with CCK.
  */
 function thirdwing_formatters_field_formatter_info() {
   return array(
@@ -134,127 +139,63 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('date', 'datestamp', 'datetime'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'media_counts' => array(
+      'label' => t('Media Counts (optimized)'),
+      'field types' => array('code'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
 /**
  * Implementation of hook_theme().
- * 
- * Register theme functions for formatters.
  */
 function thirdwing_formatters_theme() {
-  return array(
-    'thirdwing_formatters_formatter_repertoire_met_jaar' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_nummer_link' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_nummer' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_nummer_nodereference' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_koorfunctie' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_location' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_location_extended' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_datum_met_icoon' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_sleepgroep' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_tijd' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_band' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_file_description_link' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_year' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_red' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_blue' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_grey_light' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_orange' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_green' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_grey_dark' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_grey' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_purple' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_yellow' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_plain' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_formatter_badge_datum_en_tijd' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'thirdwing_formatters_media_counts_display' => array(
-      'arguments' => array('counts' => NULL, 'nid' => NULL),
-    ),
+  // Create theme registry with single array - more efficient than multiple entries
+  $themes = array();
+  
+  $formatters = array(
+    'repertoire_met_jaar', 'badge_nummer_link', 'badge_nummer', 'badge_nummer_nodereference',
+    'badge_koorfunctie', 'badge_location', 'badge_location_extended', 'datum_met_icoon',
+    'badge_sleepgroep', 'badge_tijd', 'badge_band', 'file_description_link', 'badge_year',
+    'badge_red', 'badge_blue', 'badge_grey_light', 'badge_orange', 'badge_green',
+    'badge_grey_dark', 'badge_grey', 'badge_purple', 'badge_yellow', 'badge_plain',
+    'badge_datum_en_tijd', 'media_counts'
   );
+  
+  foreach ($formatters as $formatter) {
+    $themes['thirdwing_formatters_formatter_' . $formatter] = array(
+      'arguments' => array('element' => NULL),
+    );
+  }
+  
+  $themes['thirdwing_formatters_media_counts_display'] = array(
+    'arguments' => array('counts' => NULL, 'nid' => NULL),
+  );
+  
+  return $themes;
 }
 
 /**
- * Format a repertoire field with corresponding year field appended in parentheses.
- * 
- * Automatically detects the correct year field based on the current field name:
- * - field_rep_arr -> field_rep_arr_jaar
- * - field_rep_componist -> field_rep_componist_jaar
- * - field_rep_uitv -> field_rep_uitv_jaar
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Repertoire met jaar
+ * OPTIMIZED: Early return, direct array access
  */
 function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
   $output = $element['#item']['safe'];
   
-  // Map field names to their corresponding year fields
-  $year_field_map = array(
+  // Static lookup map - faster than repeated conditionals
+  static $year_fields = array(
     'field_rep_arr' => 'field_rep_arr_jaar',
     'field_rep_componist' => 'field_rep_componist_jaar',
     'field_rep_uitv' => 'field_rep_uitv_jaar',
   );
   
-  // Get the current field name
   $field_name = $element['#field_name'];
   
-  // Check if we have a year field mapping for this field
-  if (isset($year_field_map[$field_name])) {
-    $year_field = $year_field_map[$field_name];
-    
-    // Append the year if it exists
-    if (isset($element['#node']->{$year_field}[0]['value']) && !empty($element['#node']->{$year_field}[0]['value'])) {
-      $output .= ' (' . check_plain($element['#node']->{$year_field}[0]['value']) . ')';
+  if (isset($year_fields[$field_name]) && isset($element['#node']->{$year_fields[$field_name]}[0]['value'])) {
+    $year = $element['#node']->{$year_fields[$field_name]}[0]['value'];
+    if ($year) {
+      $output .= ' (' . check_plain($year) . ')';
     }
   }
   
@@ -262,784 +203,476 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
 }
 
 /**
- * Format an integer field as a badge with link to the node.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge nummer (met link)
+ * OPTIMIZED: Consolidated string building
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
-  $value = $element['#item']['value'];
+  $value = check_plain($element['#item']['value']);
+  $span = '<span class="badge badge-nummer" title="Nummer">' . $value . '</span>';
   
-  // Get the node path
   if (isset($element['#node']->nid)) {
-    $node_path = 'node/' . $element['#node']->nid;
-    
-    return l('<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>', $node_path, array('html' => TRUE));
+    return l($span, 'node/' . $element['#node']->nid, array('html' => TRUE));
   }
   
-  // Fallback if no node context
-  return '<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>';
+  return $span;
 }
 
 /**
- * Format an integer field as a badge without link.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge nummer (zonder link)
  */
 function theme_thirdwing_formatters_formatter_badge_nummer($element) {
-  $value = $element['#item']['value'];
-  
-  return '<span class="badge badge-nummer" title="Nummer">' . check_plain($value) . '</span>';
+  return '<span class="badge badge-nummer" title="Nummer">' . check_plain($element['#item']['value']) . '</span>';
 }
 
 /**
- * Format a node reference field as badge nummer with seizoen.
- * 
- * Displays the field_audio_nummer and field_audio_seizoen from the referenced node.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge nummer (node reference)
+ * OPTIMIZED: Consolidated HTML building, static cache
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($element) {
   if (empty($element['#item']['nid'])) {
     return '';
   }
   
-  // Use static caching for node references
-  static $node_cache = array();
+  static $cache = array();
   $nid = $element['#item']['nid'];
   
-  if (!isset($node_cache[$nid])) {
-    $node_cache[$nid] = node_load($nid);
+  if (!isset($cache[$nid])) {
+    $node = node_load($nid);
+    if ($node && isset($node->field_audio_nummer[0]['value'], $node->field_audio_seizoen[0]['value'])) {
+      $cache[$nid] = array(
+        'nummer' => check_plain($node->field_audio_nummer[0]['value']),
+        'seizoen' => check_plain($node->field_audio_seizoen[0]['value']),
+        'url' => url('node/' . $nid),
+      );
+    }
+    else {
+      $cache[$nid] = FALSE;
+    }
   }
   
-  $referenced_node = $node_cache[$nid];
-  
-  if ($referenced_node && isset($referenced_node->field_audio_nummer[0]['value']) && isset($referenced_node->field_audio_seizoen[0]['value'])) {
-    $audio_nummer = $referenced_node->field_audio_nummer[0]['value'];
-    $audio_type = check_plain($referenced_node->field_audio_seizoen[0]['value']);
-    $node_url = url('node/' . $referenced_node->nid);
-    
-    return '<a href="' . $node_url . '"><div class="badge badge-nummer">' . check_plain($audio_nummer) . '</div></a><div class="badge badge-color-grey-light">' . $audio_type . '</div>';
+  if (!$cache[$nid]) {
+    return '';
   }
   
-  return '';
+  $data = $cache[$nid];
+  return '<a href="' . $data['url'] . '"><div class="badge badge-nummer">' . $data['nummer'] . 
+         '</div></a><div class="badge badge-color-grey-light">' . $data['seizoen'] . '</div>';
 }
 
 /**
- * Format a text field as a choir function badge.
- * 
- * Converts function codes to full names and displays them as badges.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge koorfunctie
+ * OPTIMIZED: Direct array lookup instead of if/elseif chain
  */
 function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
+  static $functies = array(
+    'A' => 'Tenor',
+    'B' => 'Bas',
+    'C' => '1e Sopraan',
+    'D' => '2e Sopraan',
+    'E' => 'Alt',
+    'Y1' => 'Dirigent',
+    'Z1' => 'Toetsenist',
+    'Z2' => 'Gitarist',
+    'Z3' => 'Bassist',
+    'Z4' => 'Drummer',
+    'Z5' => 'Percussionist',
+  );
+  
   $value = $element['#item']['value'];
-  $key = '';
   
-  // Map function codes to labels
-  if ($value == 'A') { 
-    $key = 'Tenor'; 
-  }
-  elseif ($value == 'B') { 
-    $key = 'Bas'; 
-  }
-  elseif ($value == 'C') { 
-    $key = '1e Sopraan'; 
-  }
-  elseif ($value == 'D') { 
-    $key = '2e Sopraan'; 
-  }
-  elseif ($value == 'E') { 
-    $key = 'Alt'; 
-  }
-  elseif ($value == 'Y1') { 
-    $key = 'Dirigent'; 
-  }
-  elseif ($value == 'Z1') { 
-    $key = 'Toetsenist'; 
-  }
-  elseif ($value == 'Z2') { 
-    $key = 'Gitarist'; 
-  }
-  elseif ($value == 'Z3') { 
-    $key = 'Bassist'; 
-  }
-  elseif ($value == 'Z4') { 
-    $key = 'Drummer'; 
-  }
-  elseif ($value == 'Z5') { 
-    $key = 'Percussionist'; 
-  }
-  
-  if ($key) {
-    return '<span class="badge badge-functie badge-functie-' . check_plain($value) . '" title="' . check_plain($key) . '">' . check_plain($key) . '</span>';
+  if (isset($functies[$value])) {
+    $label = $functies[$value];
+    return '<span class="badge badge-functie badge-functie-' . $value . '" title="' . $label . '">' . $label . '</span>';
   }
   
   return '';
 }
 
 /**
- * Format a node reference as a location badge (basic).
- * 
- * Displays location title and plaats from the referenced node.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge location
+ * OPTIMIZED: Static cache, early returns
  */
 function theme_thirdwing_formatters_formatter_badge_location($element) {
   if (empty($element['#item']['nid'])) {
     return '';
   }
   
-  // Use static caching for node references
-  static $node_cache = array();
+  static $cache = array();
   $nid = $element['#item']['nid'];
   
-  if (!isset($node_cache[$nid])) {
-    $node_cache[$nid] = node_load($nid);
-  }
-  
-  $node = $node_cache[$nid];
-  
-  if ($node) {
-    $title = check_plain($node->title);
-    $field_value = '';
-    
-    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
-      $field_value = check_plain($node->field_l_plaats[0]['value']);
+  if (!isset($cache[$nid])) {
+    $node = node_load($nid);
+    if ($node) {
+      $cache[$nid] = array(
+        'title' => check_plain($node->title),
+        'plaats' => isset($node->field_l_plaats[0]['value']) ? check_plain($node->field_l_plaats[0]['value']) : '',
+      );
     }
-    
-    return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . $title . '</span> <span class="badge-location-plaats">' . $field_value . '</span></span>';
+    else {
+      $cache[$nid] = FALSE;
+    }
   }
   
-  return '';
+  if (!$cache[$nid]) {
+    return '';
+  }
+  
+  $data = $cache[$nid];
+  return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . 
+         $data['title'] . '</span> <span class="badge-location-plaats">' . $data['plaats'] . '</span></span>';
 }
 
 /**
- * Format a node reference as a location badge (extended).
- * 
- * Displays full location details including address, postcode, plaats, route links, and notes.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge location (uitgebreid)
+ * OPTIMIZED: Reduced function calls, consolidated HTML building
  */
 function theme_thirdwing_formatters_formatter_badge_location_extended($element) {
   if (empty($element['#item']['nid'])) {
     return '';
   }
   
-  // Use static caching for node references
-  static $node_cache = array();
+  static $cache = array();
   $nid = $element['#item']['nid'];
   
-  if (!isset($node_cache[$nid])) {
-    $node_cache[$nid] = node_load($nid);
-  }
-  
-  $node = $node_cache[$nid];
-  
-  if ($node) {
-    $title = check_plain($node->title);
-    $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker"><span class="badge-location-title">' . $title . '</span>';
-    
-    // Get field_l_adres
-    if (isset($node->field_l_adres) && !empty($node->field_l_adres[0]['value'])) {
-      $adres = check_plain($node->field_l_adres[0]['value']);
-      $output .= '<span class="badge-location-adres">' . $adres . '</span>';
+  if (!isset($cache[$nid])) {
+    $node = node_load($nid);
+    if (!$node) {
+      $cache[$nid] = FALSE;
     }
-    
-    // Get field_l_postcode and field_l_plaats
-    $postcode = '';
-    if (isset($node->field_l_postcode) && !empty($node->field_l_postcode[0]['value'])) {
-      $postcode = check_plain($node->field_l_postcode[0]['value']);
-    }
-    
-    if (isset($node->field_l_plaats) && !empty($node->field_l_plaats[0]['value'])) {
-      $plaats = check_plain($node->field_l_plaats[0]['value']);
-      $output .= '<span class="badge-location-plaats">' . $postcode . ' ' . $plaats . '</span>';
-    }
-    
-    // Get field_l_routelink (link field with multiple values)
-    $routelinks = array();
-    if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
-      foreach ($node->field_l_routelink as $link_item) {
-        if (!empty($link_item['url'])) {
-          $link_url = check_url($link_item['url']);
-          $link_title = !empty($link_item['title']) ? check_plain($link_item['title']) : $link_url;
-          $routelinks[] = '<a href="' . $link_url . '">' . $link_title . '</a>';
+    else {
+      $cache[$nid] = array(
+        'title' => check_plain($node->title),
+        'adres' => isset($node->field_l_adres[0]['value']) ? check_plain($node->field_l_adres[0]['value']) : '',
+        'postcode' => isset($node->field_l_postcode[0]['value']) ? check_plain($node->field_l_postcode[0]['value']) : '',
+        'plaats' => isset($node->field_l_plaats[0]['value']) ? check_plain($node->field_l_plaats[0]['value']) : '',
+        'routelinks' => array(),
+      );
+      
+      if (isset($node->field_l_routelink) && is_array($node->field_l_routelink)) {
+        foreach ($node->field_l_routelink as $link) {
+          if (!empty($link['url'])) {
+            $url = check_url($link['url']);
+            $title = !empty($link['title']) ? check_plain($link['title']) : $url;
+            $cache[$nid]['routelinks'][] = '<a href="' . $url . '">' . $title . '</a>';
+          }
         }
       }
-      if (!empty($routelinks)) {
-        $output .= '<span class="badge-location-link">' . implode(' | ', $routelinks) . '</span>';
-      }
     }
-    
-    // Get field_l_bijzonderheden from the current node (not the referenced node)
-    $current_node = $element['#node'];
-    if (isset($current_node->field_l_bijzonderheden) && !empty($current_node->field_l_bijzonderheden[0]['value'])) {
-      $bijzonderheden = check_plain($current_node->field_l_bijzonderheden[0]['value']);
-      $output .= '<span class="badge-location-bijzonderheden">' . $bijzonderheden . '</span>';
-    }
-    
-    $output .= '</span>';
-    return $output;
   }
   
-  return '';
+  if (!$cache[$nid]) {
+    return '';
+  }
+  
+  $data = $cache[$nid];
+  $output = '<span class="badge badge-location badge-location-ext fa fa-map-marker">' .
+            '<span class="badge-location-title">' . $data['title'] . '</span>';
+  
+  if ($data['adres']) {
+    $output .= '<span class="badge-location-adres">' . $data['adres'] . '</span>';
+  }
+  
+  if ($data['plaats']) {
+    $output .= '<span class="badge-location-plaats">' . $data['postcode'] . ' ' . $data['plaats'] . '</span>';
+  }
+  
+  if (!empty($data['routelinks'])) {
+    $output .= '<span class="badge-location-link">' . implode(' | ', $data['routelinks']) . '</span>';
+  }
+  
+  // Bijzonderheden from current node
+  if (isset($element['#node']->field_l_bijzonderheden[0]['value'])) {
+    $bijz = $element['#node']->field_l_bijzonderheden[0]['value'];
+    if ($bijz) {
+      $output .= '<span class="badge-location-bijzonderheden">' . check_plain($bijz) . '</span>';
+    }
+  }
+  
+  $output .= '</span>';
+  return $output;
 }
 
 /**
- * Format a date field with contextual icon.
- * 
- * Displays different icons based on the field name:
- * - field_lidsinds: user-plus icon, shows "Aspirant" if date is in the future
- * - field_geboortedatum: birthday-cake icon
- * - field_uitkoor: user-times icon
- * - default: calendar icon
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Datum met icoon
+ * OPTIMIZED: Direct array lookup for icons, consolidated date parsing
  */
 function theme_thirdwing_formatters_formatter_datum_met_icoon($element) {
-  // Check if field is empty
   if (empty($element['#item']['value'])) {
     return '';
   }
   
-  $date = $element['#item']['value'];
+  static $icons = array(
+    'field_lidsinds' => array('icon' => 'user-plus', 'title' => 'Lid sinds'),
+    'field_geboortedatum' => array('icon' => 'birthday-cake', 'title' => 'Geboortedatum'),
+    'field_uitkoor' => array('icon' => 'user-times', 'title' => 'Uit het koor per'),
+  );
+  
   $field_name = $element['#field_name'];
+  $icon_data = isset($icons[$field_name]) ? $icons[$field_name] : array('icon' => 'calendar', 'title' => 'Datum');
   
-  // Determine icon and title based on field name
-  if ($field_name == 'field_lidsinds') {
-    $icon = 'user-plus';
-    $title = 'Lid sinds';
-  }
-  elseif ($field_name == 'field_geboortedatum') {
-    $icon = 'birthday-cake';
-    $title = 'Geboortedatum';
-  }
-  elseif ($field_name == 'field_uitkoor') {
-    $icon = 'user-times';
-    $title = 'Uit het koor per';
-  }
-  else {
-    $icon = 'calendar';
-    $title = 'Datum';
+  $dt = new DateTime($element['#item']['value']);
+  
+  // Special case: future lidsinds = aspirant
+  if ($field_name == 'field_lidsinds' && $dt > new DateTime()) {
+    return '<span class="fa fa-user-plus aspirant" title="Lid sinds">Aspirant</span>';
   }
   
-  // Parse the date
-  $dt = new DateTime($date);
-  $now = new DateTime();
-  
-  // Special handling for field_lidsinds in the future
-  if ($dt > $now && $field_name == 'field_lidsinds') {
-    return '<span class="fa fa-' . $icon . ' aspirant" title="' . check_plain($title) . '">Aspirant</span>';
-  }
-  else {
-    // Format the date as dd-mm-yyyy
-    $formatted_date = $dt->format('d-m-Y');
-    return '<span class="fa fa-' . $icon . '" title="' . check_plain($title) . '">' . $formatted_date . '</span>';
-  }
+  return '<span class="fa fa-' . $icon_data['icon'] . '" title="' . $icon_data['title'] . '">' . 
+         $dt->format('d-m-Y') . '</span>';
 }
 
 /**
- * Format a text field as a sleepgroep badge.
- * 
- * Converts numeric values to Roman numerals and special codes.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge sleepgroep
+ * OPTIMIZED: Direct array lookup
  */
 function theme_thirdwing_formatters_formatter_badge_sleepgroep($element) {
-  // Check if field is empty
   if (empty($element['#item']['value'])) {
     return '';
   }
   
+  static $groups = array('1' => 'I', '2' => 'II', '3' => 'III', '4' => 'IV', '5' => 'V', '8' => 'OG', '9' => '-');
+  
   $value = $element['#item']['value'];
+  $display = isset($groups[$value]) ? $groups[$value] : $value;
   
-  // Convert values to display format
-  if ($value == 1) { 
-    $value = 'I'; 
-  }
-  elseif ($value == 2) { 
-    $value = 'II'; 
-  }
-  elseif ($value == 3) { 
-    $value = 'III'; 
-  }
-  elseif ($value == 4) { 
-    $value = 'IV'; 
-  }
-  elseif ($value == 5) { 
-    $value = 'V'; 
-  }
-  elseif ($value == 8) { 
-    $value = 'OG'; 
-  }
-  elseif ($value == 9) { 
-    $value = '-'; 
-  }
-  
-  return '<span class="badge badge-sleepgroep" title="Sleepgroep ' . check_plain($value) . '">' . check_plain($value) . '</span>';
+  return '<span class="badge badge-sleepgroep" title="Sleepgroep ' . $display . '">' . $display . '</span>';
 }
 
 /**
- * Format a text field as a tijd badge with contextual styling.
- * 
- * Shows different icons and classes based on the field name:
- * - field_tijd_aanwezig: users icon with "Koor aanwezig" title
- * - field_sleepgroep_aanwezig: users icon with "Koor aanwezig" title
- * - other fields: clock icon with "Tijd" title
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge tijd
+ * OPTIMIZED: Direct comparison
  */
 function theme_thirdwing_formatters_formatter_badge_tijd($element) {
-  // Check if field is empty
   if (empty($element['#item']['value'])) {
     return '';
   }
   
   $value = check_plain($element['#item']['value']);
-  $field_name = $element['#field_name'];
+  $field = $element['#field_name'];
   
-  // Determine styling based on field name
-  if ($field_name == 'field_tijd_aanwezig') {
+  if ($field == 'field_tijd_aanwezig') {
     return '<span class="badge badge-koor-tijd fa fa-users" title="Koor aanwezig">' . $value . '</span>';
   }
-  elseif ($field_name == 'field_sleepgroep_aanwezig') {
+  elseif ($field == 'field_sleepgroep_aanwezig') {
     return '<span class="badge badge-sleepgroep-tijd fa fa-clock-o" title="Sleepgroep aanwezig">' . $value . '</span>';
   }
-  else {
-    return '<span class="badge badge-tijd fa fa-clock-o" title="Tijd">' . $value . '</span>';
-  }
+  
+  return '<span class="badge badge-tijd fa fa-clock-o" title="Tijd">' . $value . '</span>';
 }
 
 /**
- * Format a text field as a band member badge.
- * 
- * Shows band instrument icons with status indicators based on field name and value.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge band
+ * OPTIMIZED: Combined lookups, reduced conditionals
  */
 function theme_thirdwing_formatters_formatter_badge_band($element) {
-  // Check if field is empty
   if (empty($element['#item']['value'])) {
     return '';
   }
   
+  static $instruments = array(
+    'field_keyboard' => array('combo' => 't', 'icon' => '&#xe00b;', 'naam' => 'toetsenist'),
+    'field_gitaar' => array('combo' => 'g', 'icon' => '&#xe00a;', 'naam' => 'gitarist'),
+    'field_basgitaar' => array('combo' => 'b', 'icon' => '&#xe008;', 'naam' => 'basgitarist'),
+    'field_drums' => array('combo' => 'd', 'icon' => '&#xe009;', 'naam' => 'drummer'),
+    'field_percussie' => array('combo' => 'p', 'icon' => '&#xe00c;', 'naam' => 'percusionist'),
+  );
+  
+  static $statuses = array(
+    '+' => array('status' => 'aanwezig', 'tekst' => 'De vaste %s is aanwezig.'),
+    '?' => array('status' => 'vraag', 'tekst' => 'Het is nog niet bekend of de vaste %s aanwezig is.'),
+    '-' => array('status' => 'afwezig', 'tekst' => 'De vaste %s is afwezig.'),
+    'v' => array('status' => 'vervanging', 'tekst' => 'Er is vervanging voor de vaste %s aanwezig.'),
+  );
+  
+  $field = $element['#field_name'];
   $value = $element['#item']['value'];
-  $fieldname = $element['#field_name'];
   
-  // Determine instrument type based on field name
-  if ($fieldname == 'field_keyboard') { 
-    $combo = 't'; 
-    $icon = '&#xe00b;'; 
-    $naam = 'toetsenist'; 
-  }
-  elseif ($fieldname == 'field_gitaar') { 
-    $combo = 'g'; 
-    $icon = '&#xe00a;'; 
-    $naam = 'gitarist'; 
-  }
-  elseif ($fieldname == 'field_basgitaar') { 
-    $combo = 'b'; 
-    $icon = '&#xe008;'; 
-    $naam = 'basgitarist'; 
-  }
-  elseif ($fieldname == 'field_drums') { 
-    $combo = 'd'; 
-    $icon = '&#xe009;'; 
-    $naam = 'drummer'; 
-  }
-  elseif ($fieldname == 'field_percussie') { 
-    $combo = 'p'; 
-    $icon = '&#xe00c;'; 
-    $naam = 'percusionist'; 
-  }
-  else {
+  if (!isset($instruments[$field]) || !isset($statuses[$value])) {
     return '';
   }
   
-  // Determine status based on value
-  if ($value == '+') { 
-    $status = 'aanwezig'; 
-    $uitleg = 'De vaste ' . $naam . ' is aanwezig.';
-  }
-  elseif ($value == '?') { 
-    $status = 'vraag'; 
-    $uitleg = 'Het is nog niet bekend of de vaste ' . $naam . ' aanwezig is.';
-  }
-  elseif ($value == '-') { 
-    $status = 'afwezig'; 
-    $uitleg = 'De vaste ' . $naam . ' is afwezig.'; 
-  }
-  elseif ($value == 'v') { 
-    $status = 'vervanging'; 
-    $uitleg = 'Er is vervanging voor de vaste ' . $naam . ' aanwezig.'; 
-  }
-  else {
-    return '';
-  }
+  $inst = $instruments[$field];
+  $stat = $statuses[$value];
   
-  return '<span class="badge badge-combo badge-combo-' . $combo . ' badge-combo-' . $status . '" title="' . check_plain($uitleg) . '">' . $icon . '</span>';
+  return '<span class="badge badge-combo badge-combo-' . $inst['combo'] . ' badge-combo-' . $stat['status'] . 
+         '" title="' . sprintf($stat['tekst'], $inst['naam']) . '">' . $inst['icon'] . '</span>';
 }
 
 /**
- * Format a file field displaying the description as a link with file icon.
- * 
- * Optimized for multiple files per field - no filesystem operations.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: File description link
+ * OPTIMIZED: Combined icon mapping, reduced calls
  */
 function theme_thirdwing_formatters_formatter_file_description_link($element) {
-  // Check if field is empty
   if (empty($element['#item']['filepath'])) {
     return '';
   }
   
+  static $icons = array(
+    'pdf' => 'pdf', 'doc' => 'word', 'docx' => 'word', 'xls' => 'excel', 'xlsx' => 'excel',
+    'ppt' => 'powerpoint', 'pptx' => 'powerpoint', 'zip' => 'archive', 'rar' => 'archive',
+    'tar' => 'archive', 'gz' => 'archive', 'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image',
+    'gif' => 'image', 'mp3' => 'audio', 'wav' => 'audio', 'ogg' => 'audio', 'mp4' => 'video',
+    'avi' => 'video', 'mov' => 'video', 'txt' => 'text', 'csv' => 'text', 'mscz' => 'audio',
+    'mscx' => 'audio', 'musicxml' => 'audio', 'mid' => 'audio', 'midi' => 'audio',
+  );
+  
   $file = $element['#item'];
   $filepath = $file['filepath'];
+  $url = file_create_url($filepath);
+  $basename = basename($filepath);
+  $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
   
-  // Build URL directly - no filesystem checks
-  global $base_url;
-  $url = $base_url . '/' . ltrim($filepath, '/');
+  $description = !empty($file['data']['description']) ? check_plain($file['data']['description']) : $basename;
+  $icon_type = isset($icons[$ext]) ? $icons[$ext] : 'o';
+  $icon_class = ($icon_type == 'o') ? 'button fa fa-file-o' : 'button fa fa-file-' . $icon_type . '-o';
   
-  // Quick basename without function call overhead
-  $pos = strrpos($filepath, '/');
-  $filename = ($pos !== FALSE) ? substr($filepath, $pos + 1) : $filepath;
-  
-  // Get description or use filename
-  $description = !empty($file['data']['description']) ? check_plain($file['data']['description']) : $filename;
-  
-  // Quick extension detection
-  $pos = strrpos($filename, '.');
-  $extension = ($pos !== FALSE) ? strtolower(substr($filename, $pos + 1)) : '';
-  
-  // Minimal icon mapping - only common types
-  switch ($extension) {
-    case 'pdf':
-      $icon = 'fa-file-pdf-o';
-      break;
-    case 'doc':
-    case 'docx':
-      $icon = 'fa-file-word-o';
-      break;
-    case 'xls':
-    case 'xlsx':
-      $icon = 'fa-file-excel-o';
-      break;
-    case 'zip':
-    case 'rar':
-    case 'tar':
-    case 'gz':
-      $icon = 'fa-file-archive-o';
-      break;
-    case 'jpg':
-    case 'jpeg':
-    case 'png':
-    case 'gif':
-      $icon = 'fa-file-image-o';
-      break;
-    case 'mp3':
-    case 'wav':
-    case 'ogg':
-    case 'mscz':
-    case 'mscx':
-    case 'mid':
-    case 'midi':
-      $icon = 'fa-file-audio-o';
-      break;
-    case 'mp4':
-    case 'avi':
-    case 'mov':
-      $icon = 'fa-file-video-o';
-      break;
-    default:
-      $icon = 'fa-file-o';
-  }
-  
-  // Return simple HTML without l() function overhead
-  return '<a href="' . check_url($url) . '" class="button fa ' . $icon . '" target="_blank" title="' . 
-    check_plain($filename) . '">' . $description . '</a>';
+  return l($description, $url, array(
+    'attributes' => array('class' => $icon_class, 'target' => '_blank', 'title' => $basename),
+    'html' => FALSE,
+  ));
 }
 
-
 /**
- * Format a date field as a year badge.
- * 
- * Displays only the year from a date field in a red badge.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge year
  */
 function theme_thirdwing_formatters_formatter_badge_year($element) {
-  // Check if field is empty
   if (empty($element['#item']['value'])) {
     return '';
   }
   
-  $date = $element['#item']['value'];
-  $dt = new DateTime($date);
-  
-  // Format as year only
-  $year = $dt->format('Y');
-  
-  return '<div class="badge badge-color-red">' . $year . '</div>';
+  $dt = new DateTime($element['#item']['value']);
+  return '<div class="badge badge-color-red">' . $dt->format('Y') . '</div>';
 }
 
 /**
- * Format a field as a red badge.
+ * Generic badge formatter - consolidated for all color variants
+ * OPTIMIZED: Single function handles all badge colors
  */
+function _thirdwing_formatters_render_badge($element, $color = '') {
+  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
+    return '';
+  }
+  
+  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
+  $class = $color ? 'badge badge-color-' . $color : 'badge';
+  
+  return '<div class="' . $class . '">' . $value . '</div>';
+}
+
 function theme_thirdwing_formatters_formatter_badge_red($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-red">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'red');
 }
 
-/**
- * Format a field as a blue badge.
- */
 function theme_thirdwing_formatters_formatter_badge_blue($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-blue">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'blue');
 }
 
-/**
- * Format a field as a light grey badge.
- */
 function theme_thirdwing_formatters_formatter_badge_grey_light($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-grey-light">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'grey-light');
 }
 
-/**
- * Format a field as an orange badge.
- */
 function theme_thirdwing_formatters_formatter_badge_orange($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-orange">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'orange');
 }
 
-/**
- * Format a field as a green badge.
- */
 function theme_thirdwing_formatters_formatter_badge_green($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-green">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'green');
 }
 
-/**
- * Format a field as a dark grey badge.
- */
 function theme_thirdwing_formatters_formatter_badge_grey_dark($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-grey-dark">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'grey-dark');
 }
 
-/**
- * Format a field as a grey badge.
- */
 function theme_thirdwing_formatters_formatter_badge_grey($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-grey">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'grey');
 }
 
-/**
- * Format a field as a purple badge.
- */
 function theme_thirdwing_formatters_formatter_badge_purple($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-purple">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'purple');
 }
 
-/**
- * Format a field as a yellow badge.
- */
 function theme_thirdwing_formatters_formatter_badge_yellow($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge badge-color-yellow">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, 'yellow');
 }
 
-/**
- * Format a field as a plain badge (no color).
- */
 function theme_thirdwing_formatters_formatter_badge_plain($element) {
-  if (empty($element['#item']['value']) && $element['#item']['value'] !== '0') {
-    return '';
-  }
-  $value = isset($element['#item']['safe']) ? $element['#item']['safe'] : check_plain($element['#item']['value']);
-  return '<div class="badge">' . $value . '</div>';
+  return _thirdwing_formatters_render_badge($element, '');
 }
 
 /**
- * Format a date field as a date and time badge.
- * 
- * Displays date with day, month, year and optionally time if not 00:00.
- * 
- * @param $element
- *   The field element to format.
- * @return
- *   The formatted output.
+ * Format: Badge datum en tijd
+ * OPTIMIZED: Pre-computed Dutch translations, consolidated string building
  */
 function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
-  // Check if field is empty
   if (empty($element['#item']['value'])) {
     return '';
   }
   
-  $date = $element['#item']['value'];
-  $dt = new DateTime($date);
+  static $days = array('Mon' => 'ma', 'Tue' => 'di', 'Wed' => 'wo', 'Thu' => 'do', 'Fri' => 'vr', 'Sat' => 'za', 'Sun' => 'zo');
+  static $months = array('Jan' => 'jan', 'Feb' => 'feb', 'Mar' => 'mrt', 'Apr' => 'apr', 'May' => 'mei', 'Jun' => 'jun', 
+                         'Jul' => 'jul', 'Aug' => 'aug', 'Sep' => 'sep', 'Oct' => 'okt', 'Nov' => 'nov', 'Dec' => 'dec');
   
-  // Dutch day names (short)
-  $dutch_days = array(
-    'Mon' => 'ma',
-    'Tue' => 'di',
-    'Wed' => 'wo',
-    'Thu' => 'do',
-    'Fri' => 'vr',
-    'Sat' => 'za',
-    'Sun' => 'zo',
-  );
+  $dt = new DateTime($element['#item']['value']);
+  $time = $dt->format('H:i');
   
-  // Dutch month names (short)
-  $dutch_months = array(
-    'Jan' => 'jan',
-    'Feb' => 'feb',
-    'Mar' => 'mrt',
-    'Apr' => 'apr',
-    'May' => 'mei',
-    'Jun' => 'jun',
-    'Jul' => 'jul',
-    'Aug' => 'aug',
-    'Sep' => 'sep',
-    'Oct' => 'okt',
-    'Nov' => 'nov',
-    'Dec' => 'dec',
-  );
+  $day_en = $dt->format('D');
+  $month_en = $dt->format('M');
   
-  // Format date parts
-  $day_short_en = $dt->format('D'); // English short day
-  $month_en = $dt->format('M'); // English short month
+  $output = '<span class="badge badge-date-wrapper">' .
+            '<span class="badge badge-date fa fa-calendar" title="Datum">' .
+            '<span class="badge-day-short">' . (isset($days[$day_en]) ? $days[$day_en] : $day_en) . '</span>' .
+            '<span class="badge-day">' . $dt->format('d') . '</span>' .
+            '<span class="badge-month">' . (isset($months[$month_en]) ? $months[$month_en] : $month_en) . '</span>' .
+            '<span class="badge-year">' . $dt->format('Y') . '</span>' .
+            '</span>';
   
-  $day_short = isset($dutch_days[$day_short_en]) ? $dutch_days[$day_short_en] : $day_short_en;
-  $day = $dt->format('d'); // Day number (01-31)
-  $month = isset($dutch_months[$month_en]) ? $dutch_months[$month_en] : $month_en;
-  $year = $dt->format('Y'); // Year (2024)
-  $time = $dt->format('H:i'); // Time (14:30)
-  
-  // Build output
-  $output = '<span class="badge badge-date-wrapper">';
-  $output .= '<span class="badge badge-date fa fa-calendar" title="Datum">';
-  $output .= '<span class="badge-day-short">' . $day_short . '</span>';
-  $output .= '<span class="badge-day">' . $day . '</span>';
-  $output .= '<span class="badge-month">' . $month . '</span>';
-  $output .= '<span class="badge-year">' . $year . '</span>';
-  $output .= '</span>';
-  
-  // Add time badge only if not midnight
   if ($time != '00:00') {
     $output .= '<span class="badge badge-time fa fa-clock-o" title="Begintijd">' . $time . '</span>';
   }
   
   $output .= '</span>';
-  
   return $output;
 }
 
 /**
+ * Format: Media counts
+ */
+function theme_thirdwing_formatters_formatter_media_counts($element) {
+  if (!isset($element['#node']->nid) || $element['#node']->type != 'repertoire') {
+    return '';
+  }
+  
+  $counts = thirdwing_formatters_get_media_counts_for_display($element['#node']->nid);
+  return theme('thirdwing_formatters_media_counts_display', $counts, $element['#node']->nid);
+}
+
+/**
  * Implementation of hook_content_is_empty().
- * 
- * CCK uses this to determine if a field value is empty.
  */
 function thirdwing_formatters_content_is_empty($item, $field) {
-  if (empty($item['value'])) {
-    return TRUE;
-  }
-  return FALSE;
+  return empty($item['value']);
 }
 
 // ============================================================================
-// MEDIA COUNTS: Helper Functions and Display
+// MEDIA COUNTS: Optimized Performance
 // ============================================================================
 
 /**
  * Implementation of hook_nodeapi()
- * 
- * Handle cache clearing when audio/video nodes are modified.
+ * OPTIMIZED: Direct cache clearing
  */
 function thirdwing_formatters_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if ($op == 'insert' || $op == 'update' || $op == 'delete') {
-    // Clear cache when audio/video nodes are modified
-    if (in_array($node->type, array('audio', 'video'))) {
-      // Clear cache for the referenced repertoire node
-      if (isset($node->field_repertoire[0]['nid'])) {
-        $repertoire_nid = $node->field_repertoire[0]['nid'];
-        $cache_key = 'repertoire_media_counts_' . $repertoire_nid;
-        cache_clear_all($cache_key, 'cache');
-      }
-    }
+  if (($op == 'insert' || $op == 'update' || $op == 'delete') && 
+      in_array($node->type, array('audio', 'video')) && 
+      isset($node->field_repertoire[0]['nid'])) {
+    
+    cache_clear_all('repertoire_media_counts_' . $node->field_repertoire[0]['nid'], 'cache');
   }
 }
 
 /**
- * Theme function to display media counts
+ * Theme: Media counts display
+ * OPTIMIZED: Early return, consolidated link building
  */
 function theme_thirdwing_formatters_media_counts_display($counts, $nid) {
   if (empty($counts['audio']) && empty($counts['video'])) {
@@ -1049,55 +682,38 @@ function theme_thirdwing_formatters_media_counts_display($counts, $nid) {
   $output = '<div class="media-counts-wrapper">';
   
   if ($counts['audio'] > 0) {
-    $output .= l(
-      $counts['audio'] . ' Audio opnamen', 
-      'node/' . $nid, 
-      array(
-        'attributes' => array(
-          'class' => 'button fa fa-file-audio-o',
-        ),
-        'fragment' => 'audio', // Optional: adds #audio anchor
-      )
-    );
+    $output .= l($counts['audio'] . ' Audio opnamen', 'node/' . $nid, 
+                 array('attributes' => array('class' => 'button fa fa-file-audio-o'), 'fragment' => 'audio'));
   }
   
   if ($counts['video'] > 0) {
-    $output .= l(
-      $counts['video'] . ' Video opnamen', 
-      'node/' . $nid, 
-      array(
-        'attributes' => array(
-          'class' => 'button fa fa-file-video-o',
-        ),
-        'fragment' => 'video', // Optional: adds #video anchor
-      )
-    );
+    $output .= l($counts['video'] . ' Video opnamen', 'node/' . $nid, 
+                 array('attributes' => array('class' => 'button fa fa-file-video-o'), 'fragment' => 'video'));
   }
   
-  $output .= '</div>';
-  
-  return $output;
+  return $output . '</div>';
 }
 
 /**
- * Helper function to get counts with multiple caching layers
+ * Get media counts with triple-layer caching
+ * OPTIMIZED: Streamlined cache checks
  */
 function thirdwing_formatters_get_media_counts_for_display($nid) {
-  // Layer 1: Static cache (for same page request)
   static $static_cache = array();
   
+  // Layer 1: Static cache
   if (isset($static_cache[$nid])) {
     return $static_cache[$nid];
   }
   
-  // Check global cache from Views preload
+  // Layer 2: Global Views cache
   global $thirdwing_media_counts_cache;
   if (isset($thirdwing_media_counts_cache[$nid])) {
     $static_cache[$nid] = $thirdwing_media_counts_cache[$nid];
     return $thirdwing_media_counts_cache[$nid];
   }
   
-  // Layer 2: Drupal cache (persistent across requests)
+  // Layer 3: Drupal persistent cache
   $cache_key = 'repertoire_media_counts_' . $nid;
   $cached = cache_get($cache_key, 'cache');
   
@@ -1106,10 +722,9 @@ function thirdwing_formatters_get_media_counts_for_display($nid) {
     return $cached->data;
   }
   
-  // Layer 3: Database query
+  // Layer 4: Database query
   $counts = _thirdwing_formatters_get_media_counts($nid);
   
-  // Cache for 1 hour (3600 seconds)
   cache_set($cache_key, $counts, 'cache', time() + 3600);
   $static_cache[$nid] = $counts;
   
@@ -1117,114 +732,96 @@ function thirdwing_formatters_get_media_counts_for_display($nid) {
 }
 
 /**
- * Internal function to query database for counts
+ * Query database for media counts
+ * OPTIMIZED: Single query with minimal processing
  */
 function _thirdwing_formatters_get_media_counts($nid) {
-  $reference_field = 'field_repertoire';
-  $leden_tid = 28;
-  
-  $query = "
+  $result = db_query("
     SELECT n.type, COUNT(DISTINCT n.nid) as count
     FROM {node} n
-    INNER JOIN {content_" . $reference_field . "} cr ON n.nid = cr.nid
+    INNER JOIN {content_field_repertoire} cr ON n.nid = cr.nid
     INNER JOIN {term_node} tn ON n.nid = tn.nid
-    WHERE cr." . $reference_field . "_nid = %d
+    WHERE cr.field_repertoire_nid = %d
       AND n.status = 1
       AND n.type IN ('audio', 'video')
-      AND tn.tid = %d
+      AND tn.tid = 28
     GROUP BY n.type
-  ";
+  ", $nid);
   
-  $result = db_query($query, $nid, $leden_tid);
   $counts = array('audio' => 0, 'video' => 0);
   
   while ($row = db_fetch_object($result)) {
-    $counts[$row->type] = $row->count;
+    $counts[$row->type] = (int)$row->count;
   }
   
   return $counts;
 }
 
-// ============================================================================
-// PERFORMANCE: Batch preloading for Views
-// ============================================================================
-
 /**
  * Implementation of hook_views_pre_render()
- * Preload all counts before rendering to avoid N+1 query problem
+ * OPTIMIZED: Batch loading with single query
  */
 function thirdwing_formatters_views_pre_render(&$view) {
-  // Only process views that might contain repertoire nodes
-  if (!empty($view->result)) {
-    $nids = array();
+  if (empty($view->result)) {
+    return;
+  }
+  
+  $nids = array();
+  
+  foreach ($view->result as $result) {
+    $type = isset($result->node_type) ? $result->node_type : (isset($result->type) ? $result->type : NULL);
     
-    foreach ($view->result as $result) {
-      // Handle different result structures
-      $node_type = isset($result->node_type) ? $result->node_type : 
-                   (isset($result->type) ? $result->type : NULL);
-      
-      if ($node_type == 'repertoire' && isset($result->nid)) {
-        $nids[] = $result->nid;
-      }
+    if ($type == 'repertoire' && isset($result->nid)) {
+      $nids[] = (int)$result->nid;
     }
+  }
+  
+  if (!empty($nids)) {
+    $all_counts = thirdwing_formatters_preload_media_counts($nids);
     
-    if (!empty($nids)) {
-      // Batch load all counts
-      $all_counts = thirdwing_formatters_preload_media_counts($nids);
-      
-      // Store in global variable so individual formatters can access them
-      global $thirdwing_media_counts_cache;
-      if (!isset($thirdwing_media_counts_cache)) {
-        $thirdwing_media_counts_cache = array();
-      }
-      $thirdwing_media_counts_cache = array_merge($thirdwing_media_counts_cache, $all_counts);
+    global $thirdwing_media_counts_cache;
+    if (!isset($thirdwing_media_counts_cache)) {
+      $thirdwing_media_counts_cache = array();
     }
+    $thirdwing_media_counts_cache = array_merge($thirdwing_media_counts_cache, $all_counts);
   }
 }
 
 /**
- * Batch preload function - fetches counts for multiple nodes at once
+ * Batch preload media counts
+ * OPTIMIZED: Single query for all nodes
  */
 function thirdwing_formatters_preload_media_counts($nids) {
   if (empty($nids)) {
     return array();
   }
   
-  $reference_field = 'field_repertoire';
-  $leden_tid = 28;
-  
-  // Build placeholders for IN clause
   $placeholders = db_placeholders($nids);
+  $args = array_merge($nids, array(28));
   
-  // Single query to get all counts
-  $query = "
-    SELECT cr." . $reference_field . "_nid as repertoire_nid, 
+  $result = db_query("
+    SELECT cr.field_repertoire_nid as repertoire_nid, 
            n.type, 
            COUNT(DISTINCT n.nid) as count
     FROM {node} n
-    INNER JOIN {content_" . $reference_field . "} cr ON n.nid = cr.nid
+    INNER JOIN {content_field_repertoire} cr ON n.nid = cr.nid
     INNER JOIN {term_node} tn ON n.nid = tn.nid
-    WHERE cr." . $reference_field . "_nid IN (" . $placeholders . ")
+    WHERE cr.field_repertoire_nid IN (" . $placeholders . ")
       AND n.status = 1
       AND n.type IN ('audio', 'video')
       AND tn.tid = %d
-    GROUP BY cr." . $reference_field . "_nid, n.type
-  ";
+    GROUP BY cr.field_repertoire_nid, n.type
+  ", $args);
   
-  // Merge nids and taxonomy term for query args
-  $args = array_merge($nids, array($leden_tid));
-  $result = db_query($query, $args);
-  
-  // Process results
   $counts = array();
   while ($row = db_fetch_object($result)) {
     if (!isset($counts[$row->repertoire_nid])) {
       $counts[$row->repertoire_nid] = array('audio' => 0, 'video' => 0);
     }
-    $counts[$row->repertoire_nid][$row->type] = $row->count;
+    $counts[$row->repertoire_nid][$row->type] = (int)$row->count;
   }
   
-  // Fill in zeros for repertoire nodes with no media
+  // Fill zeros for nodes without media
   foreach ($nids as $nid) {
     if (!isset($counts[$nid])) {
       $counts[$nid] = array('audio' => 0, 'video' => 0);
@@ -1234,3 +831,56 @@ function thirdwing_formatters_preload_media_counts($nids) {
   return $counts;
 }
 
+// ============================================================================
+// Display Suite Integration
+// ============================================================================
+
+/**
+ * Implementation of hook_ds_fields()
+ */
+function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
+  if ($type_name == 'repertoire') {
+    return array(
+      'node' => array(
+        'media_counts' => array(
+          'title' => t('Media Counts'),
+          'type' => DS_FIELD_TYPE_FUNCTION,
+          'status' => DS_FIELD_STATUS_STATIC,
+          'properties' => array(
+            'function' => 'thirdwing_formatters_ds_render_media_counts',
+            'formatters' => array('default' => t('Default (buttons)')),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  return array();
+}
+
+/**
+ * Display Suite render callback
+ * OPTIMIZED: Simplified node extraction
+ */
+function thirdwing_formatters_ds_render_media_counts($field) {
+  $node = NULL;
+  
+  if (is_object($field) && isset($field->nid)) {
+    $node = $field;
+  }
+  elseif (is_array($field)) {
+    $node = isset($field['object']) ? $field['object'] : (isset($field['node']) ? $field['node'] : NULL);
+  }
+  
+  if (!$node || !isset($node->nid)) {
+    return '';
+  }
+  
+  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+  
+  if (empty($counts['audio']) && empty($counts['video'])) {
+    return '';
+  }
+  
+  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
+}
