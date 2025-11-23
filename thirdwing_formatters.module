@@ -134,6 +134,11 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('date', 'datestamp', 'datetime'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'media_counts' => array(
+      'label' => t('Media Counts (optimized)'),
+      'field types' => array('code'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -214,6 +219,9 @@ function thirdwing_formatters_theme() {
       'arguments' => array('element' => NULL),
     ),
     'thirdwing_formatters_formatter_badge_datum_en_tijd' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'thirdwing_formatters_formatter_media_counts' => array(
       'arguments' => array('element' => NULL),
     ),
     'thirdwing_formatters_media_counts_display' => array(
@@ -999,6 +1007,37 @@ function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
 }
 
 /**
+ * Format a code field as media counts display.
+ * 
+ * This formatter ignores the code field content and instead displays
+ * audio/video counts for the current repertoire node.
+ * 
+ * @param $element
+ *   The field element to format.
+ * @return
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_formatter_media_counts($element) {
+  // Get the node from element
+  if (!isset($element['#node']) || !isset($element['#node']->nid)) {
+    return '';
+  }
+  
+  $node = $element['#node'];
+  
+  // Only works for repertoire nodes
+  if ($node->type != 'repertoire') {
+    return '';
+  }
+  
+  // Get the counts with caching
+  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+  
+  // Return themed output
+  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
+}
+
+/**
  * Implementation of hook_content_is_empty().
  * 
  * CCK uses this to determine if a field value is empty.
@@ -1011,99 +1050,25 @@ function thirdwing_formatters_content_is_empty($item, $field) {
 }
 
 // ============================================================================
-// PSEUDO-FIELD: Media Counts
-// Display Suite / Node Display Compatible
+// MEDIA COUNTS: Helper Functions and Display
 // ============================================================================
-
-/**
- * Implementation of hook_content_extra_fields()
- * 
- * This registers the pseudo-field with CCK so it appears in
- * "Display fields" configuration and Display Suite.
- */
-function thirdwing_formatters_content_extra_fields($type_name) {
-  $extras = array();
-  
-  // Only add to repertoire content type
-  if ($type_name == 'repertoire') {
-    $extras['media_counts'] = array(
-      'label' => t('Media Counts'),
-      'description' => t('Audio and video recording counts'),
-      'weight' => 10,
-      'visible' => TRUE,
-    );
-  }
-  
-  return $extras;
-}
-
-/**
- * Implementation of hook_content_build_modes()
- * This ensures the field is available in all build modes
- */
-function thirdwing_formatters_content_build_modes() {
-  return array(
-    'full' => array(
-      'title' => t('Full node'),
-      'build modes' => array(
-        'full' => array(
-          'title' => t('Full node'),
-          'views style' => FALSE,
-        ),
-      ),
-    ),
-  );
-}
 
 /**
  * Implementation of hook_nodeapi()
  * 
- * Attach the media counts to the node during rendering and handle cache clearing.
+ * Handle cache clearing when audio/video nodes are modified.
  */
 function thirdwing_formatters_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  switch ($op) {
-    case 'load':
-      // Add a flag so we know this field is available
-      if ($node->type == 'repertoire') {
-        $node->_thirdwing_media_counts_available = TRUE;
+  if ($op == 'insert' || $op == 'update' || $op == 'delete') {
+    // Clear cache when audio/video nodes are modified
+    if (in_array($node->type, array('audio', 'video'))) {
+      // Clear cache for the referenced repertoire node
+      if (isset($node->field_repertoire[0]['nid'])) {
+        $repertoire_nid = $node->field_repertoire[0]['nid'];
+        $cache_key = 'repertoire_media_counts_' . $repertoire_nid;
+        cache_clear_all($cache_key, 'cache');
       }
-      break;
-      
-    case 'view':
-      if ($node->type == 'repertoire') {
-        // Get the counts with caching
-        $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
-        
-        // Only add to node content if there are actually counts to display
-        if (!empty($counts['audio']) || !empty($counts['video'])) {
-          $node->content['media_counts'] = array(
-            '#value' => theme('thirdwing_formatters_media_counts_display', $counts, $node->nid),
-            '#weight' => 10, // Default weight, can be changed in Display settings
-          );
-        }
-        else {
-          // Add empty value so the field still appears in display settings
-          $node->content['media_counts'] = array(
-            '#value' => '',
-            '#weight' => 10,
-          );
-        }
-      }
-      break;
-      
-    case 'insert':
-    case 'update':
-    case 'delete':
-      // Clear cache when audio/video nodes are modified
-      if (in_array($node->type, array('audio', 'video'))) {
-        // Clear cache for the referenced repertoire node
-        if (isset($node->field_repertoire[0]['nid'])) {
-          $repertoire_nid = $node->field_repertoire[0]['nid'];
-          $cache_key = 'repertoire_media_counts_' . $repertoire_nid;
-          cache_clear_all($cache_key, 'cache');
-        }
-      }
-      break;
+    }
   }
 }
 
