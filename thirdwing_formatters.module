@@ -139,6 +139,21 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('date', 'datestamp', 'datetime'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'badge_kar' => array(
+      'label' => t('Badge kar'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'node_type_icon' => array(
+      'label' => t('Badge node type icon'),
+      'field types' => array('nd_node_type'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'node_type' => array(
+      'label' => t('Badge node type (zonder icoon)'),
+      'field types' => array('nd_node_type'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
     'media_counts' => array(
       'label' => t('Media Counts (optimized)'),
       'field types' => array('code'),
@@ -160,7 +175,7 @@ function thirdwing_formatters_theme() {
     'badge_sleepgroep', 'badge_tijd', 'badge_band', 'file_description_link', 'badge_year',
     'badge_red', 'badge_blue', 'badge_grey_light', 'badge_orange', 'badge_green',
     'badge_grey_dark', 'badge_grey', 'badge_purple', 'badge_yellow', 'badge_plain',
-    'badge_datum_en_tijd', 'media_counts'
+    'badge_datum_en_tijd', 'badge_kar', 'node_type_icon', 'node_type', 'media_counts'
   );
   
   foreach ($formatters as $formatter) {
@@ -174,6 +189,17 @@ function thirdwing_formatters_theme() {
   );
   
   return $themes;
+}
+
+/**
+ * Implementation of hook_nd_api().
+ * 
+ * Register with Node displays module.
+ */
+function thirdwing_formatters_nd_api() {
+  return array(
+    'api' => '1',
+  );
 }
 
 /**
@@ -635,6 +661,59 @@ function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
 }
 
 /**
+ * Format: Badge kar
+ */
+function theme_thirdwing_formatters_formatter_badge_kar($element) {
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  return '<span class="badge badge-kar fa fa-truck" title="Karrijder">' . check_plain($element['#item']['value']) . '</span>';
+}
+
+/**
+ * Format: Badge node type icon
+ * Displays node type with appropriate FontAwesome icon
+ */
+function theme_thirdwing_formatters_formatter_node_type_icon($element) {
+  if (!isset($element['#node']->type)) {
+    return '';
+  }
+  
+  $node = $element['#node'];
+  $value = $node->type;
+  
+  // Map node types to FontAwesome icons
+  static $icon_map = array(
+    'audio' => 'microphone',
+    'video' => 'film',
+    'foto' => 'camera',
+    'nieuws' => 'newspaper-o',
+    'activiteit' => 'calendar-check-o',
+    'profiel' => 'user',
+    'repertoire' => 'music',
+  );
+  
+  $icon = isset($icon_map[$value]) ? $icon_map[$value] : 'file-o';
+  
+  return '<div class="badge badge-nodetype badge-nodetype-' . check_plain($value) . ' fa fa-' . $icon . '">' . check_plain($value) . '</div>';
+}
+
+/**
+ * Format: Badge node type (without icon)
+ * Displays node type without FontAwesome icon
+ */
+function theme_thirdwing_formatters_formatter_node_type($element) {
+  if (!isset($element['#node']->type)) {
+    return '';
+  }
+  
+  $value = check_plain($element['#node']->type);
+  
+  return '<div class="badge badge-nodetype badge-nodetype-' . $value . '">' . $value . '</div>';
+}
+
+/**
  * Format: Media counts
  */
 function theme_thirdwing_formatters_formatter_media_counts($element) {
@@ -839,23 +918,26 @@ function thirdwing_formatters_preload_media_counts($nids) {
  * Implementation of hook_ds_fields()
  */
 function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
+  $fields = array();
+  
+  // Media counts field for repertoire only
   if ($type_name == 'repertoire') {
-    return array(
-      'node' => array(
-        'media_counts' => array(
-          'title' => t('Media Counts'),
-          'type' => DS_FIELD_TYPE_FUNCTION,
-          'status' => DS_FIELD_STATUS_STATIC,
-          'properties' => array(
-            'function' => 'thirdwing_formatters_ds_render_media_counts',
-            'formatters' => array('default' => t('Default (buttons)')),
-          ),
-        ),
+    $fields['media_counts'] = array(
+      'title' => t('Media Counts'),
+      'type' => DS_FIELD_TYPE_FUNCTION,
+      'status' => DS_FIELD_STATUS_STATIC,
+      'properties' => array(
+        'function' => 'thirdwing_formatters_ds_render_media_counts',
+        'formatters' => array('default' => t('Default (buttons)')),
       ),
     );
   }
   
-  return array();
+  if (empty($fields)) {
+    return array();
+  }
+  
+  return array('node' => $fields);
 }
 
 /**
