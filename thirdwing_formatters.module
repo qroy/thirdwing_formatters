@@ -188,6 +188,17 @@ function thirdwing_formatters_theme() {
     'arguments' => array('counts' => NULL, 'nid' => NULL),
   );
   
+  // Display Suite theme functions
+  $themes['thirdwing_ds_node_type_icon'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_ds_node_type_badge'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_ds_node_type_plain'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  
   return $themes;
 }
 
@@ -201,6 +212,105 @@ function thirdwing_formatters_nd_api() {
     'api' => '1',
   );
 }
+
+// ============================================================================
+// DISPLAY SUITE INTEGRATION
+// ============================================================================
+
+/**
+ * Implementation of hook_ds_fields_alter().
+ * 
+ * Modify the 'node_type' field created by thirdwingmods module to add
+ * our custom formatters.
+ */
+function thirdwing_formatters_ds_fields_alter(&$fields) {
+  // Check if the node_type field exists (created by thirdwingmods)
+  if (isset($fields['node_type'])) {
+    // Add our custom formatters to the existing formatters array
+    $fields['node_type']['properties']['formatters']['thirdwing_ds_node_type_icon'] = t('Node type with icon');
+    $fields['node_type']['properties']['formatters']['thirdwing_ds_node_type_badge'] = t('Node type badge');
+    $fields['node_type']['properties']['formatters']['thirdwing_ds_node_type_plain'] = t('Node type (plain text)');
+  }
+}
+
+/**
+ * Theme function: Node type with icon (Display Suite).
+ * 
+ * Displays node type with appropriate FontAwesome icon.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The formatted output.
+ */
+function theme_thirdwing_ds_node_type_icon($field) {
+  if (!isset($field['object']->type)) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  $value = $node->type;
+  
+  // Map node types to FontAwesome icons
+  static $icon_map = array(
+    'audio' => 'microphone',
+    'video' => 'film',
+    'foto' => 'camera',
+    'nieuws' => 'newspaper-o',
+    'activiteit' => 'calendar-check-o',
+    'profiel' => 'user',
+    'repertoire' => 'music',
+  );
+  
+  $icon = isset($icon_map[$value]) ? $icon_map[$value] : 'file-o';
+  
+  return '<div class="badge badge-nodetype badge-nodetype-' . check_plain($value) . ' fa fa-' . $icon . '">' . check_plain($value) . '</div>';
+}
+
+/**
+ * Theme function: Node type badge (Display Suite).
+ * 
+ * Displays node type as a colored badge without icon.
+ * 
+ * @param array $field
+ *   The field array from Display Suite.
+ *   
+ * @return string
+ *   The formatted output.
+ */
+function theme_thirdwing_ds_node_type_badge($field) {
+  if (!isset($field['object']->type)) {
+    return '';
+  }
+  
+  $value = check_plain($field['object']->type);
+  
+  return '<div class="badge badge-nodetype badge-nodetype-' . $value . '">' . $value . '</div>';
+}
+
+/**
+ * Theme function: Node type plain text (Display Suite).
+ * 
+ * Displays node type as simple text (matches original thirdwingmods formatter).
+ * 
+ * @param array $field
+ *   The field array from Display Suite.
+ *   
+ * @return string
+ *   The formatted output.
+ */
+function theme_thirdwing_ds_node_type_plain($field) {
+  if (!isset($field['object']->type)) {
+    return '';
+  }
+  
+  return '<div class="node-type">' . check_plain($field['object']->type) . '</div>';
+}
+
+// ============================================================================
+// CCK FIELD FORMATTERS
+// ============================================================================
 
 /**
  * Format: Repertoire met jaar
