@@ -160,6 +160,11 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('code'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'icon_link' => array(
+      'label' => t('Icon link (phone/email/mobile)'),
+      'field types' => array('text', 'email'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -176,7 +181,8 @@ function thirdwing_formatters_theme() {
     'badge_sleepgroep', 'badge_tijd', 'badge_band', 'file_description_link', 'badge_year',
     'badge_red', 'badge_blue', 'badge_grey_light', 'badge_orange', 'badge_green',
     'badge_grey_dark', 'badge_grey', 'badge_purple', 'badge_yellow', 'badge_plain',
-    'badge_datum_en_tijd', 'badge_kar', 'node_type_icon', 'node_type', 'media_counts'
+    'badge_datum_en_tijd', 'badge_kar', 'node_type_icon', 'node_type', 'media_counts',
+    'icon_link'
   );
   
   foreach ($formatters as $formatter) {
@@ -200,6 +206,18 @@ function thirdwing_formatters_theme() {
     'arguments' => array('field' => NULL),
   );
   $themes['thirdwing_formatters_ds_oefenmateriaal_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_read_more_contextual_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_node_count_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_author_picture_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_author_email_default'] = array(
     'arguments' => array('field' => NULL),
   );
   
@@ -239,6 +257,54 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
         'thirdwing_formatters_ds_node_type_plain' => t('Node type (plain text)'),
         'thirdwing_formatters_ds_node_type_icon' => t('Node type with icon'),
         'thirdwing_formatters_ds_node_type_badge' => t('Node type badge'),
+      ),
+    ),
+  );
+  
+  // Read more contextual field - available for all node types
+  $fields['read_more_contextual'] = array(
+    'title' => t('Read More Contextual'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_read_more_contextual_default' => t('Contextual link'),
+      ),
+    ),
+  );
+  
+  // Node count field - available for all node types
+  $fields['node_count'] = array(
+    'title' => t('Node Count'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_node_count_default' => t('Row number'),
+      ),
+    ),
+  );
+  
+  // Author picture field - available for all node types
+  $fields['author_picture'] = array(
+    'title' => t('Author Picture'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_author_picture_default' => t('User picture'),
+      ),
+    ),
+  );
+  
+  // Author email field - available for all node types
+  $fields['author_email'] = array(
+    'title' => t('Author Email'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_author_email_default' => t('Email link'),
       ),
     ),
   );
@@ -374,6 +440,162 @@ function theme_thirdwing_formatters_ds_oefenmateriaal_default($field) {
   }
   
   return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
+}
+
+/**
+ * Theme function: Read More Contextual (Display Suite).
+ * 
+ * Displays contextual read more links based on node type and content.
+ * - For activiteit: Shows "Meer info" (future) or "Lees verslag" (past)
+ * - For nieuws: Shows "Lees verder" only if body is longer than teaser
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_ds_read_more_contextual_default($field) {
+  if (!isset($field['object']->nid)) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  $output = '';
+  
+  // Handle activiteit nodes
+  if ($node->type == 'activiteit') {
+    if (isset($node->field_datum[0]['value'])) {
+      $event_date = strtotime($node->field_datum[0]['value']);
+      $current_date = time();
+      
+      if ($event_date > $current_date) {
+        $link_text = 'Meer info';
+      }
+      else {
+        $link_text = 'Lees verslag';
+      }
+      
+      $output = l($link_text, 'node/' . $node->nid, array(
+        'attributes' => array('class' => 'button fa fa-arrow-circle-right')
+      ));
+    }
+  }
+  // Handle nieuws nodes
+  elseif ($node->type == 'nieuws') {
+    // Check if we have body content already loaded
+    if (isset($node->body) && isset($node->teaser)) {
+      $body_text = strip_tags($node->body);
+      $teaser_text = strip_tags($node->teaser);
+      
+      // If body text is longer than teaser text, there's more content to read
+      if (strlen($body_text) > strlen($teaser_text)) {
+        $output = l('Lees verder', 'node/' . $node->nid, array(
+          'attributes' => array('class' => 'button fa fa-arrow-circle-right')
+        ));
+      }
+    }
+    else {
+      // If body not loaded in teaser view, load full node
+      $full_node = node_load($node->nid);
+      
+      if ($full_node && isset($full_node->body)) {
+        $body_text = strip_tags($full_node->body);
+        $teaser_text = isset($full_node->teaser) ? strip_tags($full_node->teaser) : '';
+        
+        if (strlen($body_text) > strlen($teaser_text)) {
+          $output = l('Lees verder', 'node/' . $node->nid, array(
+            'attributes' => array('class' => 'button fa fa-arrow-circle-right')
+          ));
+        }
+      }
+    }
+  }
+  
+  return $output;
+}
+
+/**
+ * Theme function: Node Count (Display Suite).
+ * 
+ * Returns the row number from the current view.
+ * Useful for displaying numbered lists in views.
+ * 
+ * @param array $field
+ *   The field array from Display Suite.
+ *   
+ * @return string
+ *   The row number (1-indexed).
+ */
+function theme_thirdwing_formatters_ds_node_count_default($field) {
+  // Get the current view
+  $view = views_get_current_view();
+  
+  if ($view && isset($view->row_index)) {
+    // The row index starts at 0, so add 1 for human-readable numbering
+    return $view->row_index + 1;
+  }
+  
+  return '';
+}
+
+/**
+ * Theme function: Author Picture (Display Suite).
+ * 
+ * Displays the user picture of the node's author.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The themed user picture.
+ */
+function theme_thirdwing_formatters_ds_author_picture_default($field) {
+  if (!isset($field['object']->uid)) {
+    return '';
+  }
+  
+  $account = user_load($field['object']->uid);
+  
+  if ($account) {
+    return theme('user_picture', $account);
+  }
+  
+  return '';
+}
+
+/**
+ * Theme function: Author Email (Display Suite).
+ * 
+ * Displays the node author's email as a mailto link with envelope icon.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The mailto link with the author's email.
+ */
+function theme_thirdwing_formatters_ds_author_email_default($field) {
+  if (!isset($field['object']->uid) || !isset($field['object']->nid)) {
+    return '';
+  }
+  
+  $author = user_load($field['object']->uid);
+  
+  if ($author && !empty($author->mail)) {
+    return l(
+      '<span class="fa fa-envelope-o">' . check_plain($author->mail) . '</span>',
+      'mailto:' . $author->mail,
+      array(
+        'attributes' => array(
+          'id' => 'author-email-' . $field['object']->nid,
+        ),
+        'html' => TRUE,
+      )
+    );
+  }
+  
+  return '';
 }
 
 // ============================================================================
@@ -889,6 +1111,50 @@ function theme_thirdwing_formatters_formatter_node_type($element) {
   $value = check_plain($element['#node']->type);
   
   return '<div class="badge badge-nodetype badge-nodetype-' . $value . '">' . $value . '</div>';
+}
+
+/**
+ * Format: Icon link (phone/email/mobile)
+ * Displays value with appropriate icon and link based on field name
+ * OPTIMIZED: Direct array lookup for field icons
+ */
+function theme_thirdwing_formatters_formatter_icon_link($element) {
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  static $field_config = array(
+    'field_mobiel' => array('icon' => 'mobile', 'prefix' => 'tel:'),
+    'field_telefoon' => array('icon' => 'phone', 'prefix' => 'tel:'),
+    'field_email' => array('icon' => 'envelope-o', 'prefix' => 'mailto:'),
+  );
+  
+  $field_name = $element['#field_name'];
+  $value = $element['#item']['value'];
+  
+  // Check if this field has icon configuration
+  if (isset($field_config[$field_name])) {
+    $config = $field_config[$field_name];
+    $icon = $config['icon'];
+    $prefix = $config['prefix'];
+    
+    // Generate unique ID if node is available
+    $id = isset($element['#node']->nid) ? $field_name . '-' . $element['#node']->nid : '';
+    
+    return l(
+      '<span class="fa fa-' . $icon . '">' . check_plain($value) . '</span>',
+      $prefix . $value,
+      array(
+        'attributes' => array(
+          'id' => $id,
+        ),
+        'html' => TRUE,
+      )
+    );
+  }
+  
+  // Fallback for fields without specific config
+  return check_plain($value);
 }
 
 /**
