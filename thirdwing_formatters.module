@@ -4,7 +4,8 @@
  * Custom field formatters for Thirdwing site - Performance Optimized
  * 
  * Provides custom CCK field formatters that were previously defined
- * through the custom_formatters module, plus a pseudo-field for media counts.
+ * through the custom_formatters module, plus Display Suite fields including
+ * the node_type field with multiple formatters.
  * 
  * PERFORMANCE OPTIMIZATIONS:
  * - Reduced function call overhead
@@ -189,13 +190,13 @@ function thirdwing_formatters_theme() {
   );
   
   // Display Suite theme functions
-  $themes['thirdwing_ds_node_type_icon'] = array(
+  $themes['thirdwing_formatters_ds_node_type_plain'] = array(
     'arguments' => array('field' => NULL),
   );
-  $themes['thirdwing_ds_node_type_badge'] = array(
+  $themes['thirdwing_formatters_ds_node_type_icon'] = array(
     'arguments' => array('field' => NULL),
   );
-  $themes['thirdwing_ds_node_type_plain'] = array(
+  $themes['thirdwing_formatters_ds_node_type_badge'] = array(
     'arguments' => array('field' => NULL),
   );
   
@@ -218,19 +219,64 @@ function thirdwing_formatters_nd_api() {
 // ============================================================================
 
 /**
- * Implementation of hook_ds_fields_alter().
+ * Implementation of hook_ds_fields().
  * 
- * Modify the 'node_type' field created by thirdwingmods module to add
- * our custom formatters.
+ * Create Display Suite fields with multiple formatters.
  */
-function thirdwing_formatters_ds_fields_alter(&$fields) {
-  // Check if the node_type field exists (created by thirdwingmods)
-  if (isset($fields['node_type'])) {
-    // Add our custom formatters to the existing formatters array
-    $fields['node_type']['properties']['formatters']['thirdwing_ds_node_type_icon'] = t('Node type with icon');
-    $fields['node_type']['properties']['formatters']['thirdwing_ds_node_type_badge'] = t('Node type badge');
-    $fields['node_type']['properties']['formatters']['thirdwing_ds_node_type_plain'] = t('Node type (plain text)');
+function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
+  $fields = array();
+  
+  // Node type field - available for all node types
+  $fields['node_type'] = array(
+    'title' => t('Node type'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_node_type_plain' => t('Node type (plain text)'),
+        'thirdwing_formatters_ds_node_type_icon' => t('Node type with icon'),
+        'thirdwing_formatters_ds_node_type_badge' => t('Node type badge'),
+      ),
+    ),
+  );
+  
+  // Media counts field for repertoire only
+  if ($type_name == 'repertoire') {
+    $fields['media_counts'] = array(
+      'title' => t('Media Counts'),
+      'type' => DS_FIELD_TYPE_FUNCTION,
+      'status' => DS_FIELD_STATUS_STATIC,
+      'properties' => array(
+        'function' => 'thirdwing_formatters_ds_render_media_counts',
+        'formatters' => array('default' => t('Default (buttons)')),
+      ),
+    );
   }
+  
+  if (empty($fields)) {
+    return array();
+  }
+  
+  return array('nd' => $fields);
+}
+
+/**
+ * Theme function: Node type plain text (Display Suite).
+ * 
+ * Displays node type as simple text.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The formatted output.
+ */
+function theme_thirdwing_formatters_ds_node_type_plain($field) {
+  if (!isset($field['object']->type)) {
+    return '';
+  }
+  
+  return '<div class="node-type">' . check_plain($field['object']->type) . '</div>';
 }
 
 /**
@@ -244,7 +290,7 @@ function thirdwing_formatters_ds_fields_alter(&$fields) {
  * @return string
  *   The formatted output.
  */
-function theme_thirdwing_ds_node_type_icon($field) {
+function theme_thirdwing_formatters_ds_node_type_icon($field) {
   if (!isset($field['object']->type)) {
     return '';
   }
@@ -261,6 +307,7 @@ function theme_thirdwing_ds_node_type_icon($field) {
     'activiteit' => 'calendar-check-o',
     'profiel' => 'user',
     'repertoire' => 'music',
+    'locatie' => 'map-marker',
   );
   
   $icon = isset($icon_map[$value]) ? $icon_map[$value] : 'file-o';
@@ -279,7 +326,7 @@ function theme_thirdwing_ds_node_type_icon($field) {
  * @return string
  *   The formatted output.
  */
-function theme_thirdwing_ds_node_type_badge($field) {
+function theme_thirdwing_formatters_ds_node_type_badge($field) {
   if (!isset($field['object']->type)) {
     return '';
   }
@@ -290,22 +337,30 @@ function theme_thirdwing_ds_node_type_badge($field) {
 }
 
 /**
- * Theme function: Node type plain text (Display Suite).
- * 
- * Displays node type as simple text (matches original thirdwingmods formatter).
- * 
- * @param array $field
- *   The field array from Display Suite.
- *   
- * @return string
- *   The formatted output.
+ * Display Suite render callback for media counts.
+ * OPTIMIZED: Simplified node extraction
  */
-function theme_thirdwing_ds_node_type_plain($field) {
-  if (!isset($field['object']->type)) {
+function thirdwing_formatters_ds_render_media_counts($field) {
+  $node = NULL;
+  
+  if (is_object($field) && isset($field->nid)) {
+    $node = $field;
+  }
+  elseif (is_array($field)) {
+    $node = isset($field['object']) ? $field['object'] : (isset($field['node']) ? $field['node'] : NULL);
+  }
+  
+  if (!$node || !isset($node->nid)) {
     return '';
   }
   
-  return '<div class="node-type">' . check_plain($field['object']->type) . '</div>';
+  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+  
+  if (empty($counts['audio']) && empty($counts['video'])) {
+    return '';
+  }
+  
+  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
 }
 
 // ============================================================================
@@ -1018,61 +1073,4 @@ function thirdwing_formatters_preload_media_counts($nids) {
   }
   
   return $counts;
-}
-
-// ============================================================================
-// Display Suite Integration
-// ============================================================================
-
-/**
- * Implementation of hook_ds_fields()
- */
-function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
-  $fields = array();
-  
-  // Media counts field for repertoire only
-  if ($type_name == 'repertoire') {
-    $fields['media_counts'] = array(
-      'title' => t('Media Counts'),
-      'type' => DS_FIELD_TYPE_FUNCTION,
-      'status' => DS_FIELD_STATUS_STATIC,
-      'properties' => array(
-        'function' => 'thirdwing_formatters_ds_render_media_counts',
-        'formatters' => array('default' => t('Default (buttons)')),
-      ),
-    );
-  }
-  
-  if (empty($fields)) {
-    return array();
-  }
-  
-  return array('node' => $fields);
-}
-
-/**
- * Display Suite render callback
- * OPTIMIZED: Simplified node extraction
- */
-function thirdwing_formatters_ds_render_media_counts($field) {
-  $node = NULL;
-  
-  if (is_object($field) && isset($field->nid)) {
-    $node = $field;
-  }
-  elseif (is_array($field)) {
-    $node = isset($field['object']) ? $field['object'] : (isset($field['node']) ? $field['node'] : NULL);
-  }
-  
-  if (!$node || !isset($node->nid)) {
-    return '';
-  }
-  
-  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
-  
-  if (empty($counts['audio']) && empty($counts['video'])) {
-    return '';
-  }
-  
-  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
 }
