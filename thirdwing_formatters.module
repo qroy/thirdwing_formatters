@@ -165,6 +165,31 @@ function thirdwing_formatters_field_formatter_info() {
       'field types' => array('text', 'email'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'kleding_link' => array(
+      'label' => t('Kleding link (naar richtlijn)'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'youtube_embed' => array(
+      'label' => t('YouTube Embed'),
+      'field types' => array('emvideo'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'youtube_thumbnail' => array(
+      'label' => t('YouTube Thumbnail'),
+      'field types' => array('emvideo'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'background_image' => array(
+      'label' => t('Background image (CSS)'),
+      'field types' => array('filefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'download_restricted' => array(
+      'label' => t('Download link (restricted to members)'),
+      'field types' => array('filefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -182,7 +207,8 @@ function thirdwing_formatters_theme() {
     'badge_red', 'badge_blue', 'badge_grey_light', 'badge_orange', 'badge_green',
     'badge_grey_dark', 'badge_grey', 'badge_purple', 'badge_yellow', 'badge_plain',
     'badge_datum_en_tijd', 'badge_kar', 'node_type_icon', 'node_type', 'media_counts',
-    'icon_link'
+    'icon_link', 'kleding_link', 'youtube_embed', 'youtube_thumbnail', 'background_image',
+    'download_restricted'
   );
   
   foreach ($formatters as $formatter) {
@@ -218,6 +244,21 @@ function thirdwing_formatters_theme() {
     'arguments' => array('field' => NULL),
   );
   $themes['thirdwing_formatters_ds_author_email_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_social_share_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_edit_link_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_clone_link_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_mp3_download_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
+  $themes['thirdwing_formatters_ds_nieuws_add_link_default'] = array(
     'arguments' => array('field' => NULL),
   );
   
@@ -308,6 +349,68 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
       ),
     ),
   );
+  
+  // Social share field - available for all node types
+  $fields['social_share'] = array(
+    'title' => t('Social Share'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_social_share_default' => t('Facebook & LinkedIn'),
+      ),
+    ),
+  );
+  
+  // Edit link field - available for all node types
+  $fields['edit_link'] = array(
+    'title' => t('Edit Link'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_edit_link_default' => t('Edit button (with permission check)'),
+      ),
+    ),
+  );
+  
+  // Clone link field - available for all node types
+  $fields['clone_link'] = array(
+    'title' => t('Clone Link'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_clone_link_default' => t('Clone button (with permission check)'),
+      ),
+    ),
+  );
+  
+  // MP3 download field - available for all node types
+  $fields['mp3_download'] = array(
+    'title' => t('MP3 Download'),
+    'type' => DS_FIELD_TYPE_THEME,
+    'status' => DS_FIELD_STATUS_STATIC,
+    'properties' => array(
+      'formatters' => array(
+        'thirdwing_formatters_ds_mp3_download_default' => t('Download link (restricted to members)'),
+      ),
+    ),
+  );
+  
+  // Add nieuws link - ONLY for activiteit
+  if ($type_name == 'activiteit') {
+    $fields['nieuws_add_link'] = array(
+      'title' => t('Nieuws Add Link'),
+      'type' => DS_FIELD_TYPE_THEME,
+      'status' => DS_FIELD_STATUS_STATIC,
+      'properties' => array(
+        'formatters' => array(
+          'thirdwing_formatters_ds_nieuws_add_link_default' => t('Add mededelingen button'),
+        ),
+      ),
+    );
+  }
   
   // Oefenmateriaal field - ONLY for repertoire
   if ($type_name == 'repertoire') {
@@ -598,13 +701,247 @@ function theme_thirdwing_formatters_ds_author_email_default($field) {
   return '';
 }
 
+/**
+ * Theme function: Social Share (Display Suite).
+ * 
+ * Displays social media share buttons for Facebook and LinkedIn.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The social share buttons.
+ */
+function theme_thirdwing_formatters_ds_social_share_default($field) {
+  if (!isset($field['object']->nid) || !isset($field['object']->title)) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  $output = '';
+  
+  // Facebook share button
+  $output .= l(
+    t('Share on Facebook'),
+    'https://www.facebook.com/sharer/sharer.php?u=www.thirdwing.nl/node/' . $node->nid,
+    array(
+      'attributes' => array(
+        'class' => 'button button-inline button-icon-only button-social fa fa-facebook',
+        'title' => 'Deel op Facebook',
+      ),
+    )
+  );
+  
+  // LinkedIn share button
+  $output .= l(
+    t('Share on LinkedIn'),
+    'https://www.linkedin.com/shareArticle?mini=true&url=www.thirdwing.nl/node/' . $node->nid . '&title=' . urlencode($node->title),
+    array(
+      'attributes' => array(
+        'class' => 'button button-inline button-icon-only button-social fa fa-linkedin',
+        'title' => 'Deel op LinkedIn',
+      ),
+    )
+  );
+  
+  return $output;
+}
+
+/**
+ * Theme function: Edit Link (Display Suite).
+ * 
+ * Displays an edit button if the user has permission to edit the node.
+ * Includes a destination parameter to return to the current page after editing.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The edit button, or empty string if user lacks permission.
+ */
+function theme_thirdwing_formatters_ds_edit_link_default($field) {
+  if (!isset($field['object']->nid)) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  
+  // Check if user has permission to edit this node
+  if (node_access('update', $node)) {
+    return '<div class="edit-link-wrapper">' . 
+           l(
+             t('Bewerk'),
+             'node/' . $node->nid . '/edit',
+             array(
+               'query' => array('destination' => $_GET['q']),
+               'attributes' => array(
+                 'class' => 'button button-inline button-icon-only button-admin fa fa-edit',
+               ),
+             )
+           ) . 
+           '</div>';
+  }
+  
+  return '';
+}
+
+/**
+ * Theme function: Clone Link (Display Suite).
+ * 
+ * Displays a clone button if the user has permission to clone the node
+ * and the clone module is enabled.
+ * Includes a destination parameter to return to the current page after cloning.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The clone button, or empty string if user lacks permission or module not enabled.
+ */
+function theme_thirdwing_formatters_ds_clone_link_default($field) {
+  if (!isset($field['object']->nid)) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  
+  // Check if clone module is enabled and user has permission to clone this node
+  if (module_exists('clone') && clone_access_cloning($node)) {
+    return '<div class="clone-link-wrapper">' . 
+           l(
+             t('Kopieer'),
+             'node/' . $node->nid . '/clone',
+             array(
+               'query' => array('destination' => $_GET['q']),
+               'attributes' => array(
+                 'class' => 'button button-inline button-icon-only button-admin fa fa-copy',
+               ),
+             )
+           ) . 
+           '</div>';
+  }
+  
+  return '';
+}
+
+/**
+ * Theme function: MP3 Download (Display Suite).
+ * 
+ * Displays download link for field_mp3 if user has required permissions.
+ * Only shows for uid 1, Lid, or Beheerder roles.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The download button, or empty string if user lacks permission or no file.
+ */
+function theme_thirdwing_formatters_ds_mp3_download_default($field) {
+  if (!isset($field['object'])) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  
+  // Check if field_mp3 exists and has a file
+  if (empty($node->field_mp3[0]['filepath'])) {
+    return '';
+  }
+  
+  global $user;
+  
+  // Check if user has access: uid 1, or has 'Lid' or 'Beheerder' role
+  $has_access = ($user->uid == 1);
+  
+  if (!$has_access && !empty($user->roles)) {
+    $has_access = (in_array('Lid', $user->roles) || in_array('Beheerder', $user->roles));
+  }
+  
+  if (!$has_access) {
+    return '';
+  }
+  
+  $file = $node->field_mp3[0];
+  
+  // Use description if available, otherwise use filename
+  $link_text = !empty($file['data']['description']) ? check_plain($file['data']['description']) : check_plain(basename($file['filepath']));
+  
+  return l(
+    $link_text,
+    file_create_url($file['filepath']),
+    array(
+      'attributes' => array(
+        'class' => 'button button-inline button-icon-only file-download-link fa fa-download',
+      ),
+    )
+  );
+}
+
+/**
+ * Theme function: Nieuws Add Link (Display Suite).
+ * 
+ * Displays "Add mededelingen" button for activiteit nodes with pre-filled form.
+ * Only shows if user has permission to create nieuws content.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The add mededelingen button, or empty string if user lacks permission.
+ */
+function theme_thirdwing_formatters_ds_nieuws_add_link_default($field) {
+  // Check if user can create nieuws content
+  if (!node_access('create', 'nieuws')) {
+    return '';
+  }
+  
+  if (!isset($field['object']->nid) || !isset($field['object']->field_datum[0]['value'])) {
+    return '';
+  }
+  
+  $node = $field['object'];
+  $nid = $node->nid;
+  
+  // Format the date from field_datum
+  $date_value = $node->field_datum[0]['value'];
+  $formatted_date = format_date(strtotime($date_value), 'custom', 'd F Y');
+  
+  // Format date for submission time (field_datum at 20:00:00)
+  $submission_date = format_date(strtotime($date_value), 'custom', 'Y-m-d 20:00:00');
+  
+  // Create the title
+  $title = 'Mededelingen ' . $formatted_date;
+  
+  // Build the URL with query parameters
+  return l(
+    'Mededelingen toevoegen',
+    'node/add/nieuws',
+    array(
+      'query' => array(
+        'edit[field_ref_activiteit][0][nid][nid]' => '[nid:' . $nid . ']',
+        'edit[title]' => $title,
+        'edit[taxonomy][4][221]' => '221',
+        'edit[taxonomy][4][28]' => '28',
+        'edit[author][name]' => 'Marcel',
+        'edit[author][date]' => $submission_date,
+        'edit[field_afbeeldingen][0][fid]' => '30131',
+        'edit[field_afbeeldingen][0][list]' => '1',
+      ),
+      'attributes' => array(
+        'class' => 'button button-inline button-icon-only button-admin fa fa-bullhorn',
+        'title' => 'Mededelingen toevoegen',
+      ),
+    )
+  );
+}
+
 // ============================================================================
 // CCK FIELD FORMATTERS
 // ============================================================================
 
 /**
  * Format: Repertoire met jaar
- * OPTIMIZED: Early return, direct array access
+ * OPTIMIZED: Early return, direct array access, handles Views context
  */
 function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
   $output = $element['#item']['safe'];
@@ -618,8 +955,39 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
   
   $field_name = $element['#field_name'];
   
-  if (isset($year_fields[$field_name]) && isset($element['#node']->{$year_fields[$field_name]}[0]['value'])) {
-    $year = $element['#node']->{$year_fields[$field_name]}[0]['value'];
+  // Check if we have a year field for this field
+  if (!isset($year_fields[$field_name])) {
+    return $output;
+  }
+  
+  $year_field = $year_fields[$field_name];
+  $node = NULL;
+  
+  // Try to get the node from element
+  if (isset($element['#node'])) {
+    $node = $element['#node'];
+  }
+  
+  // If node not in element or year field not loaded, try to load it
+  if (!$node || !isset($node->{$year_field})) {
+    // Get node ID from various possible locations
+    $nid = NULL;
+    if (isset($element['#node']->nid)) {
+      $nid = $element['#node']->nid;
+    }
+    elseif (isset($element['#item']['nid'])) {
+      $nid = $element['#item']['nid'];
+    }
+    
+    // Load the node to get the year field
+    if ($nid) {
+      $node = node_load($nid);
+    }
+  }
+  
+  // Now check if we have the year field
+  if ($node && isset($node->{$year_field}[0]['value'])) {
+    $year = $node->{$year_field}[0]['value'];
     if ($year) {
       $output .= ' (' . check_plain($year) . ')';
     }
@@ -1155,6 +1523,118 @@ function theme_thirdwing_formatters_formatter_icon_link($element) {
   
   // Fallback for fields without specific config
   return check_plain($value);
+}
+
+/**
+ * Format: Kleding link
+ * Displays value as link to kleding richtlijn (node/6039) with user icon
+ */
+function theme_thirdwing_formatters_formatter_kleding_link($element) {
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $value = $element['#item']['value'];
+  
+  return l(
+    check_plain($value),
+    'node/6039',
+    array(
+      'attributes' => array(
+        'class' => 'fa fa-user',
+        'title' => 'Richtlijn kleding',
+      ),
+    )
+  );
+}
+
+/**
+ * Format: YouTube Embed
+ * Displays YouTube video as embedded iframe
+ */
+function theme_thirdwing_formatters_formatter_youtube_embed($element) {
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $value = check_plain($element['#item']['value']);
+  
+  return '<iframe class="video video-embed" width="560" height="315" src="https://www.youtube.com/embed/' . 
+         $value . '" frameborder="0" allowfullscreen></iframe>';
+}
+
+/**
+ * Format: YouTube Thumbnail
+ * Displays YouTube video thumbnail linked to YouTube
+ */
+function theme_thirdwing_formatters_formatter_youtube_thumbnail($element) {
+  if (empty($element['#item']['value'])) {
+    return '';
+  }
+  
+  $value = check_plain($element['#item']['value']);
+  
+  return '<a href="https://www.youtube.com/watch?v=' . $value . '" class="video video-thumb">' .
+         '<img src="https://img.youtube.com/vi/' . $value . '/0.jpg"></a>';
+}
+
+/**
+ * Format: Background image
+ * Displays file as CSS background-image in a div
+ * OPTIMIZED: Direct path construction without file_create_url overhead
+ */
+function theme_thirdwing_formatters_formatter_background_image($element) {
+  if (empty($element['#item']['filepath'])) {
+    return '';
+  }
+  
+  $filepath = $element['#item']['filepath'];
+  
+  // Construct URL directly - more efficient than file_create_url()
+  // Assumes files are in default files directory
+  $url = '/' . $filepath;
+  
+  return '<div class="node-background" style="background-image: url(' . check_plain($url) . ');"></div>';
+}
+
+/**
+ * Format: Download restricted
+ * Displays download link only for uid 1, Lid, or Beheerder roles
+ * OPTIMIZED: Early return, single role check
+ */
+function theme_thirdwing_formatters_formatter_download_restricted($element) {
+  if (empty($element['#item']['filepath'])) {
+    return '';
+  }
+  
+  global $user;
+  
+  // Check if user has access: uid 1, or has 'Lid' or 'Beheerder' role
+  $has_access = ($user->uid == 1);
+  
+  if (!$has_access && !empty($user->roles)) {
+    $has_access = (in_array('Lid', $user->roles) || in_array('Beheerder', $user->roles));
+  }
+  
+  if (!$has_access) {
+    return '';
+  }
+  
+  $file = $element['#item'];
+  $filepath = $file['filepath'];
+  
+  // Use description if available, otherwise use filename
+  $link_text = !empty($file['data']['description']) ? check_plain($file['data']['description']) : check_plain(basename($filepath));
+  
+  return l(
+    $link_text,
+    file_create_url($filepath),
+    array(
+      'attributes' => array(
+        'class' => 'button button-inline button-icon-only file-download-link fa fa-download',
+      ),
+    )
+  );
 }
 
 /**
