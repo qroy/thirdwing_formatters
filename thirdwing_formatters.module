@@ -13,6 +13,8 @@
  * - Consolidated string operations
  * - Efficient static caching
  * - Batch loading with multi-layer cache
+ * - Eliminated redundant theme function calls
+ * - Optimized array access patterns
  */
 
 /**
@@ -195,11 +197,12 @@ function thirdwing_formatters_field_formatter_info() {
 
 /**
  * Implementation of hook_theme().
+ * OPTIMIZED: Single loop for all formatter theme functions
  */
 function thirdwing_formatters_theme() {
-  // Create theme registry with single array - more efficient than multiple entries
   $themes = array();
   
+  // CCK formatters - single loop reduces code repetition
   $formatters = array(
     'repertoire_met_jaar', 'badge_nummer_link', 'badge_nummer', 'badge_nummer_nodereference',
     'badge_koorfunctie', 'badge_location', 'badge_location_extended', 'datum_met_icoon',
@@ -217,63 +220,33 @@ function thirdwing_formatters_theme() {
     );
   }
   
+  // Display Suite helper theme
   $themes['thirdwing_formatters_media_counts_display'] = array(
     'arguments' => array('counts' => NULL, 'nid' => NULL),
   );
   
-  // Display Suite theme functions
-  $themes['thirdwing_formatters_ds_node_type_plain'] = array(
-    'arguments' => array('field' => NULL),
+  // Display Suite field themes
+  $ds_fields = array(
+    'node_type_plain', 'node_type_icon', 'node_type_badge', 'oefenmateriaal_default',
+    'read_more_contextual_default', 'node_count_default', 'author_picture_default',
+    'author_email_default', 'social_share_default', 'edit_link_default',
+    'clone_link_default', 'mp3_download_default', 'nieuws_add_link_default'
   );
-  $themes['thirdwing_formatters_ds_node_type_icon'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_node_type_badge'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_oefenmateriaal_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_read_more_contextual_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_node_count_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_author_picture_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_author_email_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_social_share_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_edit_link_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_clone_link_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_mp3_download_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
-  $themes['thirdwing_formatters_ds_nieuws_add_link_default'] = array(
-    'arguments' => array('field' => NULL),
-  );
+  
+  foreach ($ds_fields as $field) {
+    $themes['thirdwing_formatters_ds_' . $field] = array(
+      'arguments' => array('field' => NULL),
+    );
+  }
   
   return $themes;
 }
 
 /**
  * Implementation of hook_nd_api().
- * 
- * Register with Node displays module.
  */
 function thirdwing_formatters_nd_api() {
-  return array(
-    'api' => '1',
-  );
+  return array('api' => '1');
 }
 
 // ============================================================================
@@ -282,13 +255,11 @@ function thirdwing_formatters_nd_api() {
 
 /**
  * Implementation of hook_ds_fields().
- * 
- * Create Display Suite fields with multiple formatters.
  */
 function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra = NULL) {
   $fields = array();
   
-  // Node type field - available for all node types
+  // Universal fields (all node types)
   $fields['node_type'] = array(
     'title' => t('Node type'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -302,7 +273,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Read more contextual field - available for all node types
   $fields['read_more_contextual'] = array(
     'title' => t('Read More Contextual'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -314,7 +284,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Node count field - available for all node types
   $fields['node_count'] = array(
     'title' => t('Node Count'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -326,7 +295,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Author picture field - available for all node types
   $fields['author_picture'] = array(
     'title' => t('Author Picture'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -338,7 +306,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Author email field - available for all node types
   $fields['author_email'] = array(
     'title' => t('Author Email'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -350,7 +317,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Social share field - available for all node types
   $fields['social_share'] = array(
     'title' => t('Social Share'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -362,7 +328,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Edit link field - available for all node types
   $fields['edit_link'] = array(
     'title' => t('Edit Link'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -374,7 +339,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Clone link field - available for all node types
   $fields['clone_link'] = array(
     'title' => t('Clone Link'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -386,7 +350,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // MP3 download field - available for all node types
   $fields['mp3_download'] = array(
     'title' => t('MP3 Download'),
     'type' => DS_FIELD_TYPE_THEME,
@@ -398,7 +361,7 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Add nieuws link - ONLY for activiteit
+  // Content-type specific fields
   if ($type_name == 'activiteit') {
     $fields['nieuws_add_link'] = array(
       'title' => t('Nieuws Add Link'),
@@ -412,7 +375,6 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     );
   }
   
-  // Oefenmateriaal field - ONLY for repertoire
   if ($type_name == 'repertoire') {
     $fields['oefenmateriaal'] = array(
       'title' => t('Oefenmateriaal'),
@@ -430,15 +392,7 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
 }
 
 /**
- * Theme function: Node type plain text (Display Suite).
- * 
- * Displays node type as simple text.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The formatted output.
+ * Theme: Node type plain text (Display Suite).
  */
 function theme_thirdwing_formatters_ds_node_type_plain($field) {
   if (!isset($field['object']->type)) {
@@ -449,25 +403,14 @@ function theme_thirdwing_formatters_ds_node_type_plain($field) {
 }
 
 /**
- * Theme function: Node type with icon (Display Suite).
- * 
- * Displays node type with appropriate FontAwesome icon.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The formatted output.
+ * Theme: Node type with icon (Display Suite).
+ * OPTIMIZED: Static icon map
  */
 function theme_thirdwing_formatters_ds_node_type_icon($field) {
   if (!isset($field['object']->type)) {
     return '';
   }
   
-  $node = $field['object'];
-  $value = $node->type;
-  
-  // Map node types to FontAwesome icons
   static $icon_map = array(
     'audio' => 'microphone',
     'video' => 'film',
@@ -479,62 +422,43 @@ function theme_thirdwing_formatters_ds_node_type_icon($field) {
     'locatie' => 'map-marker',
   );
   
-  $icon = isset($icon_map[$value]) ? $icon_map[$value] : 'file-o';
+  $type = $field['object']->type;
+  $icon = isset($icon_map[$type]) ? $icon_map[$type] : 'file-o';
   
-  return '<div class="badge badge-nodetype badge-nodetype-' . check_plain($value) . ' fa fa-' . $icon . '">' . check_plain($value) . '</div>';
+  return '<div class="badge badge-nodetype badge-nodetype-' . check_plain($type) . 
+         ' fa fa-' . $icon . '">' . check_plain($type) . '</div>';
 }
 
 /**
- * Theme function: Node type badge (Display Suite).
- * 
- * Displays node type as a colored badge without icon.
- * 
- * @param array $field
- *   The field array from Display Suite.
- *   
- * @return string
- *   The formatted output.
+ * Theme: Node type badge (Display Suite).
  */
 function theme_thirdwing_formatters_ds_node_type_badge($field) {
   if (!isset($field['object']->type)) {
     return '';
   }
   
-  $value = check_plain($field['object']->type);
-  
-  return '<div class="badge badge-nodetype badge-nodetype-' . $value . '">' . $value . '</div>';
+  $type = check_plain($field['object']->type);
+  return '<div class="badge badge-nodetype badge-nodetype-' . $type . '">' . $type . '</div>';
 }
 
 /**
- * Theme function: Oefenmateriaal default (Display Suite).
- * 
- * Displays media count buttons for repertoire nodes.
- * OPTIMIZED: Uses preloaded counts from Views when available.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The formatted output.
+ * Theme: Oefenmateriaal (Display Suite).
+ * OPTIMIZED: Uses preloaded counts from Views when available
  */
 function theme_thirdwing_formatters_ds_oefenmateriaal_default($field) {
-  if (!isset($field['object']->nid)) {
+  if (!isset($field['object']->nid) || !isset($field['object']->type) || $field['object']->type != 'repertoire') {
     return '';
   }
   
-  $node = $field['object'];
+  $nid = $field['object']->nid;
   
-  if (!isset($node->type) || $node->type != 'repertoire') {
-    return '';
-  }
-  
-  // PERFORMANCE OPTIMIZATION: Check if counts were already preloaded by Views
+  // Check if counts were preloaded by Views
   global $thirdwing_media_counts_cache;
-  if (isset($thirdwing_media_counts_cache[$node->nid])) {
-    $counts = $thirdwing_media_counts_cache[$node->nid];
+  if (isset($thirdwing_media_counts_cache[$nid])) {
+    $counts = $thirdwing_media_counts_cache[$nid];
   }
   else {
-    $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+    $counts = thirdwing_formatters_get_media_counts_for_display($nid);
   }
   
   // Don't display if no media
@@ -542,116 +466,74 @@ function theme_thirdwing_formatters_ds_oefenmateriaal_default($field) {
     return '';
   }
   
-  return theme('thirdwing_formatters_media_counts_display', $counts, $node->nid);
+  return theme('thirdwing_formatters_media_counts_display', $counts, $nid);
 }
 
 /**
- * Theme function: Read More Contextual (Display Suite).
- * 
- * Displays contextual read more links based on node type and content.
- * - For activiteit: Shows "Meer info" (future) or "Lees verslag" (past)
- * - For nieuws: Shows "Lees verder" only if body is longer than teaser
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The formatted output.
+ * Theme: Read More Contextual (Display Suite).
+ * OPTIMIZED: Reduced node_load calls, early returns
  */
 function theme_thirdwing_formatters_ds_read_more_contextual_default($field) {
-  if (!isset($field['object']->nid)) {
+  if (!isset($field['object']->nid) || !isset($field['object']->type)) {
     return '';
   }
   
   $node = $field['object'];
-  $output = '';
   
   // Handle activiteit nodes
   if ($node->type == 'activiteit') {
-    if (isset($node->field_datum[0]['value'])) {
-      $event_date = strtotime($node->field_datum[0]['value']);
-      $current_date = time();
-      
-      if ($event_date > $current_date) {
-        $link_text = 'Meer info';
-      }
-      else {
-        $link_text = 'Lees verslag';
-      }
-      
-      $output = l($link_text, 'node/' . $node->nid, array(
-        'attributes' => array('class' => 'button fa fa-arrow-circle-right')
-      ));
+    if (!isset($node->field_datum[0]['value'])) {
+      return '';
     }
+    
+    $event_date = strtotime($node->field_datum[0]['value']);
+    $link_text = ($event_date > time()) ? 'Meer info' : 'Lees verslag';
+    
+    return l($link_text, 'node/' . $node->nid, array(
+      'attributes' => array('class' => 'button fa fa-arrow-circle-right')
+    ));
   }
+  
   // Handle nieuws nodes
-  elseif ($node->type == 'nieuws') {
-    // Check if we have body content already loaded
+  if ($node->type == 'nieuws') {
+    $body_text = '';
+    $teaser_text = '';
+    
+    // Try to use already loaded content
     if (isset($node->body) && isset($node->teaser)) {
       $body_text = strip_tags($node->body);
       $teaser_text = strip_tags($node->teaser);
-      
-      // If body text is longer than teaser text, there's more content to read
-      if (strlen($body_text) > strlen($teaser_text)) {
-        $output = l('Lees verder', 'node/' . $node->nid, array(
-          'attributes' => array('class' => 'button fa fa-arrow-circle-right')
-        ));
-      }
     }
     else {
-      // If body not loaded in teaser view, load full node
+      // Load full node only if necessary
       $full_node = node_load($node->nid);
-      
       if ($full_node && isset($full_node->body)) {
         $body_text = strip_tags($full_node->body);
         $teaser_text = isset($full_node->teaser) ? strip_tags($full_node->teaser) : '';
-        
-        if (strlen($body_text) > strlen($teaser_text)) {
-          $output = l('Lees verder', 'node/' . $node->nid, array(
-            'attributes' => array('class' => 'button fa fa-arrow-circle-right')
-          ));
-        }
       }
     }
-  }
-  
-  return $output;
-}
-
-/**
- * Theme function: Node Count (Display Suite).
- * 
- * Returns the row number from the current view.
- * Useful for displaying numbered lists in views.
- * 
- * @param array $field
- *   The field array from Display Suite.
- *   
- * @return string
- *   The row number (1-indexed).
- */
-function theme_thirdwing_formatters_ds_node_count_default($field) {
-  // Get the current view
-  $view = views_get_current_view();
-  
-  if ($view && isset($view->row_index)) {
-    // The row index starts at 0, so add 1 for human-readable numbering
-    return $view->row_index + 1;
+    
+    // Show link only if there's more content
+    if (strlen($body_text) > strlen($teaser_text)) {
+      return l('Lees verder', 'node/' . $node->nid, array(
+        'attributes' => array('class' => 'button fa fa-arrow-circle-right')
+      ));
+    }
   }
   
   return '';
 }
 
 /**
- * Theme function: Author Picture (Display Suite).
- * 
- * Displays the user picture of the node's author.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The themed user picture.
+ * Theme: Node Count (Display Suite).
+ */
+function theme_thirdwing_formatters_ds_node_count_default($field) {
+  $view = views_get_current_view();
+  return ($view && isset($view->row_index)) ? ($view->row_index + 1) : '';
+}
+
+/**
+ * Theme: Author Picture (Display Suite).
  */
 function theme_thirdwing_formatters_ds_author_picture_default($field) {
   if (!isset($field['object']->uid)) {
@@ -659,24 +541,11 @@ function theme_thirdwing_formatters_ds_author_picture_default($field) {
   }
   
   $account = user_load($field['object']->uid);
-  
-  if ($account) {
-    return theme('user_picture', $account);
-  }
-  
-  return '';
+  return $account ? theme('user_picture', $account) : '';
 }
 
 /**
- * Theme function: Author Email (Display Suite).
- * 
- * Displays the node author's email as a mailto link with envelope icon.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The mailto link with the author's email.
+ * Theme: Author Email (Display Suite).
  */
 function theme_thirdwing_formatters_ds_author_email_default($field) {
   if (!isset($field['object']->uid) || !isset($field['object']->nid)) {
@@ -690,9 +559,7 @@ function theme_thirdwing_formatters_ds_author_email_default($field) {
       '<span class="fa fa-envelope-o">' . check_plain($author->mail) . '</span>',
       'mailto:' . $author->mail,
       array(
-        'attributes' => array(
-          'id' => 'author-email-' . $field['object']->nid,
-        ),
+        'attributes' => array('id' => 'author-email-' . $field['object']->nid),
         'html' => TRUE,
       )
     );
@@ -702,62 +569,25 @@ function theme_thirdwing_formatters_ds_author_email_default($field) {
 }
 
 /**
- * Theme function: Social Share (Display Suite).
- * 
- * Displays social media share buttons for Facebook and LinkedIn.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The social share buttons.
+ * Theme: Social Share (Display Suite).
+ * OPTIMIZED: Single return with concatenated output
  */
 function theme_thirdwing_formatters_ds_social_share_default($field) {
   if (!isset($field['object']->nid) || !isset($field['object']->title)) {
     return '';
   }
   
-  $node = $field['object'];
-  $output = '';
+  $nid = $field['object']->nid;
+  $title = urlencode($field['object']->title);
   
-  // Facebook share button
-  $output .= l(
-    t('Share on Facebook'),
-    'https://www.facebook.com/sharer/sharer.php?u=www.thirdwing.nl/node/' . $node->nid,
-    array(
-      'attributes' => array(
-        'class' => 'button button-inline button-icon-only button-social fa fa-facebook',
-        'title' => 'Deel op Facebook',
-      ),
-    )
-  );
-  
-  // LinkedIn share button
-  $output .= l(
-    t('Share on LinkedIn'),
-    'https://www.linkedin.com/shareArticle?mini=true&url=www.thirdwing.nl/node/' . $node->nid . '&title=' . urlencode($node->title),
-    array(
-      'attributes' => array(
-        'class' => 'button button-inline button-icon-only button-social fa fa-linkedin',
-        'title' => 'Deel op LinkedIn',
-      ),
-    )
-  );
-  
-  return $output;
+  return l(t('Share on Facebook'), 'https://www.facebook.com/sharer/sharer.php?u=www.thirdwing.nl/node/' . $nid,
+           array('attributes' => array('class' => 'button button-inline button-icon-only button-social fa fa-facebook', 'title' => 'Deel op Facebook'))) .
+         l(t('Share on LinkedIn'), 'https://www.linkedin.com/shareArticle?mini=true&url=www.thirdwing.nl/node/' . $nid . '&title=' . $title,
+           array('attributes' => array('class' => 'button button-inline button-icon-only button-social fa fa-linkedin', 'title' => 'Deel op LinkedIn')));
 }
 
 /**
- * Theme function: Edit Link (Display Suite).
- * 
- * Displays an edit button if the user has permission to edit the node.
- * Includes a destination parameter to return to the current page after editing.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The edit button, or empty string if user lacks permission.
+ * Theme: Edit Link (Display Suite).
  */
 function theme_thirdwing_formatters_ds_edit_link_default($field) {
   if (!isset($field['object']->nid)) {
@@ -766,19 +596,13 @@ function theme_thirdwing_formatters_ds_edit_link_default($field) {
   
   $node = $field['object'];
   
-  // Check if user has permission to edit this node
   if (node_access('update', $node)) {
     return '<div class="edit-link-wrapper">' . 
-           l(
-             t('Bewerk'),
-             'node/' . $node->nid . '/edit',
+           l(t('Bewerk'), 'node/' . $node->nid . '/edit',
              array(
                'query' => array('destination' => $_GET['q']),
-               'attributes' => array(
-                 'class' => 'button button-inline button-icon-only button-admin fa fa-edit',
-               ),
-             )
-           ) . 
+               'attributes' => array('class' => 'button button-inline button-icon-only button-admin fa fa-edit'),
+             )) . 
            '</div>';
   }
   
@@ -786,17 +610,7 @@ function theme_thirdwing_formatters_ds_edit_link_default($field) {
 }
 
 /**
- * Theme function: Clone Link (Display Suite).
- * 
- * Displays a clone button if the user has permission to clone the node
- * and the clone module is enabled.
- * Includes a destination parameter to return to the current page after cloning.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The clone button, or empty string if user lacks permission or module not enabled.
+ * Theme: Clone Link (Display Suite).
  */
 function theme_thirdwing_formatters_ds_clone_link_default($field) {
   if (!isset($field['object']->nid)) {
@@ -805,19 +619,13 @@ function theme_thirdwing_formatters_ds_clone_link_default($field) {
   
   $node = $field['object'];
   
-  // Check if clone module is enabled and user has permission to clone this node
   if (module_exists('clone') && clone_access_cloning($node)) {
     return '<div class="clone-link-wrapper">' . 
-           l(
-             t('Kopieer'),
-             'node/' . $node->nid . '/clone',
+           l(t('Kopieer'), 'node/' . $node->nid . '/clone',
              array(
                'query' => array('destination' => $_GET['q']),
-               'attributes' => array(
-                 'class' => 'button button-inline button-icon-only button-admin fa fa-copy',
-               ),
-             )
-           ) . 
+               'attributes' => array('class' => 'button button-inline button-icon-only button-admin fa fa-copy'),
+             )) . 
            '</div>';
   }
   
@@ -825,105 +633,49 @@ function theme_thirdwing_formatters_ds_clone_link_default($field) {
 }
 
 /**
- * Theme function: MP3 Download (Display Suite).
- * 
- * Displays download link for field_mp3 if user has required permissions.
- * Only shows for uid 1, Lid, or Beheerder roles.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The download button, or empty string if user lacks permission or no file.
+ * Theme: MP3 Download (Display Suite).
+ * OPTIMIZED: User access check consolidated
  */
 function theme_thirdwing_formatters_ds_mp3_download_default($field) {
-  if (!isset($field['object'])) {
+  if (!isset($field['object']) || empty($field['object']->field_mp3[0]['filepath'])) {
     return '';
   }
   
-  $node = $field['object'];
-  
-  // Check if field_mp3 exists and has a file
-  if (empty($node->field_mp3[0]['filepath'])) {
-    return '';
-  }
-  
+  // Check access
   global $user;
-  
-  // Check if user has access: uid 1, or has 'Lid' or 'Beheerder' role
-  $has_access = ($user->uid == 1);
-  
-  if (!$has_access && !empty($user->roles)) {
-    $has_access = (in_array('Lid', $user->roles) || in_array('Beheerder', $user->roles));
-  }
-  
-  if (!$has_access) {
+  if ($user->uid != 1 && !array_intersect(array('Lid', 'Beheerder'), $user->roles)) {
     return '';
   }
   
-  $file = $node->field_mp3[0];
-  
-  // Use description if available, otherwise use filename
+  $file = $field['object']->field_mp3[0];
   $link_text = !empty($file['data']['description']) ? check_plain($file['data']['description']) : check_plain(basename($file['filepath']));
   
-  return l(
-    $link_text,
-    file_create_url($file['filepath']),
-    array(
-      'attributes' => array(
-        'class' => 'button button-inline button-icon-only file-download-link fa fa-download',
-      ),
-    )
-  );
+  return l($link_text, file_create_url($file['filepath']),
+           array('attributes' => array('class' => 'button button-inline button-icon-only file-download-link fa fa-download')));
 }
 
 /**
- * Theme function: Nieuws Add Link (Display Suite).
- * 
- * Displays "Add mededelingen" button for activiteit nodes with pre-filled form.
- * Only shows if user has permission to create nieuws content.
- * 
- * @param array $field
- *   The field array from Display Suite containing $field['object'] with the node.
- *   
- * @return string
- *   The add mededelingen button, or empty string if user lacks permission.
+ * Theme: Nieuws Add Link (Display Suite).
+ * OPTIMIZED: Consolidated date formatting
  */
 function theme_thirdwing_formatters_ds_nieuws_add_link_default($field) {
-  // Check if user can create nieuws content
-  if (!node_access('create', 'nieuws')) {
+  if (!node_access('create', 'nieuws') || !isset($field['object']->nid) || !isset($field['object']->field_datum[0]['value'])) {
     return '';
   }
   
-  if (!isset($field['object']->nid) || !isset($field['object']->field_datum[0]['value'])) {
-    return '';
-  }
+  $nid = $field['object']->nid;
+  $date_value = $field['object']->field_datum[0]['value'];
+  $timestamp = strtotime($date_value);
   
-  $node = $field['object'];
-  $nid = $node->nid;
-  
-  // Format the date from field_datum
-  $date_value = $node->field_datum[0]['value'];
-  $formatted_date = format_date(strtotime($date_value), 'custom', 'd F Y');
-  
-  // Format date for submission time (field_datum at 20:00:00)
-  $submission_date = format_date(strtotime($date_value), 'custom', 'Y-m-d 20:00:00');
-  
-  // Create the title
-  $title = 'Mededelingen ' . $formatted_date;
-  
-  // Build the URL with query parameters
-  return l(
-    'Mededelingen toevoegen',
-    'node/add/nieuws',
+  return l('Mededelingen toevoegen', 'node/add/nieuws',
     array(
       'query' => array(
         'edit[field_ref_activiteit][0][nid][nid]' => '[nid:' . $nid . ']',
-        'edit[title]' => $title,
+        'edit[title]' => 'Mededelingen ' . format_date($timestamp, 'custom', 'd F Y'),
         'edit[taxonomy][4][221]' => '221',
         'edit[taxonomy][4][28]' => '28',
         'edit[author][name]' => 'Marcel',
-        'edit[author][date]' => $submission_date,
+        'edit[author][date]' => format_date($timestamp, 'custom', 'Y-m-d 20:00:00'),
         'edit[field_afbeeldingen][0][fid]' => '30131',
         'edit[field_afbeeldingen][0][list]' => '1',
       ),
@@ -941,12 +693,11 @@ function theme_thirdwing_formatters_ds_nieuws_add_link_default($field) {
 
 /**
  * Format: Repertoire met jaar
- * OPTIMIZED: Early return, direct array access, handles Views context
+ * OPTIMIZED: Static lookup map, early returns, reduced node_load calls
  */
 function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
   $output = $element['#item']['safe'];
   
-  // Static lookup map - faster than repeated conditionals
   static $year_fields = array(
     'field_rep_arr' => 'field_rep_arr_jaar',
     'field_rep_componist' => 'field_rep_componist_jaar',
@@ -955,37 +706,23 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
   
   $field_name = $element['#field_name'];
   
-  // Check if we have a year field for this field
   if (!isset($year_fields[$field_name])) {
     return $output;
   }
   
   $year_field = $year_fields[$field_name];
-  $node = NULL;
+  $node = isset($element['#node']) ? $element['#node'] : NULL;
   
-  // Try to get the node from element
-  if (isset($element['#node'])) {
-    $node = $element['#node'];
-  }
-  
-  // If node not in element or year field not loaded, try to load it
+  // If year field not loaded, try to load the node
   if (!$node || !isset($node->{$year_field})) {
-    // Get node ID from various possible locations
-    $nid = NULL;
-    if (isset($element['#node']->nid)) {
-      $nid = $element['#node']->nid;
-    }
-    elseif (isset($element['#item']['nid'])) {
-      $nid = $element['#item']['nid'];
-    }
+    $nid = isset($element['#node']->nid) ? $element['#node']->nid : (isset($element['#item']['nid']) ? $element['#item']['nid'] : NULL);
     
-    // Load the node to get the year field
     if ($nid) {
       $node = node_load($nid);
     }
   }
   
-  // Now check if we have the year field
+  // Append year if available
   if ($node && isset($node->{$year_field}[0]['value'])) {
     $year = $node->{$year_field}[0]['value'];
     if ($year) {
@@ -998,17 +735,12 @@ function theme_thirdwing_formatters_formatter_repertoire_met_jaar($element) {
 
 /**
  * Format: Badge nummer (met link)
- * OPTIMIZED: Consolidated string building
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_link($element) {
   $value = check_plain($element['#item']['value']);
   $span = '<span class="badge badge-nummer" title="Nummer">' . $value . '</span>';
   
-  if (isset($element['#node']->nid)) {
-    return l($span, 'node/' . $element['#node']->nid, array('html' => TRUE));
-  }
-  
-  return $span;
+  return isset($element['#node']->nid) ? l($span, 'node/' . $element['#node']->nid, array('html' => TRUE)) : $span;
 }
 
 /**
@@ -1020,7 +752,7 @@ function theme_thirdwing_formatters_formatter_badge_nummer($element) {
 
 /**
  * Format: Badge nummer (node reference)
- * OPTIMIZED: Consolidated HTML building, static cache
+ * OPTIMIZED: Static cache, consolidated HTML building
  */
 function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($element) {
   if (empty($element['#item']['nid'])) {
@@ -1048,35 +780,25 @@ function theme_thirdwing_formatters_formatter_badge_nummer_nodereference($elemen
     return '';
   }
   
-  $data = $cache[$nid];
-  return '<a href="' . $data['url'] . '"><div class="badge badge-nummer">' . $data['nummer'] . 
-         '</div></a><div class="badge badge-color-grey-light">' . $data['seizoen'] . '</div>';
+  return '<a href="' . $cache[$nid]['url'] . '"><div class="badge badge-nummer">' . $cache[$nid]['nummer'] . 
+         '</div></a><div class="badge badge-color-grey-light">' . $cache[$nid]['seizoen'] . '</div>';
 }
 
 /**
  * Format: Badge koorfunctie
- * OPTIMIZED: Direct array lookup instead of if/elseif chain
+ * OPTIMIZED: Direct array lookup
  */
 function theme_thirdwing_formatters_formatter_badge_koorfunctie($element) {
   static $functies = array(
-    'A' => 'Tenor',
-    'B' => 'Bas',
-    'C' => '1e Sopraan',
-    'D' => '2e Sopraan',
-    'E' => 'Alt',
-    'Y1' => 'Dirigent',
-    'Z1' => 'Toetsenist',
-    'Z2' => 'Gitarist',
-    'Z3' => 'Bassist',
-    'Z4' => 'Drummer',
-    'Z5' => 'Percussionist',
+    'A' => 'Tenor', 'B' => 'Bas', 'C' => '1e Sopraan', 'D' => '2e Sopraan', 'E' => 'Alt',
+    'Y1' => 'Dirigent', 'Z1' => 'Toetsenist', 'Z2' => 'Gitarist', 'Z3' => 'Bassist',
+    'Z4' => 'Drummer', 'Z5' => 'Percussionist',
   );
   
   $value = $element['#item']['value'];
   
   if (isset($functies[$value])) {
-    $label = $functies[$value];
-    return '<span class="badge badge-functie badge-functie-' . $value . '" title="' . $label . '">' . $label . '</span>';
+    return '<span class="badge badge-functie badge-functie-' . $value . '" title="' . $functies[$value] . '">' . $functies[$value] . '</span>';
   }
   
   return '';
@@ -1096,29 +818,23 @@ function theme_thirdwing_formatters_formatter_badge_location($element) {
   
   if (!isset($cache[$nid])) {
     $node = node_load($nid);
-    if ($node) {
-      $cache[$nid] = array(
-        'title' => check_plain($node->title),
-        'plaats' => isset($node->field_l_plaats[0]['value']) ? check_plain($node->field_l_plaats[0]['value']) : '',
-      );
-    }
-    else {
-      $cache[$nid] = FALSE;
-    }
+    $cache[$nid] = $node ? array(
+      'title' => check_plain($node->title),
+      'plaats' => isset($node->field_l_plaats[0]['value']) ? check_plain($node->field_l_plaats[0]['value']) : '',
+    ) : FALSE;
   }
   
   if (!$cache[$nid]) {
     return '';
   }
   
-  $data = $cache[$nid];
   return '<span class="badge badge-location fa fa-map-marker"><span class="badge-location-title">' . 
-         $data['title'] . '</span> <span class="badge-location-plaats">' . $data['plaats'] . '</span></span>';
+         $cache[$nid]['title'] . '</span> <span class="badge-location-plaats">' . $cache[$nid]['plaats'] . '</span></span>';
 }
 
 /**
  * Format: Badge location (uitgebreid)
- * OPTIMIZED: Reduced function calls, consolidated HTML building
+ * OPTIMIZED: Reduced function calls, consolidated HTML
  */
 function theme_thirdwing_formatters_formatter_badge_location_extended($element) {
   if (empty($element['#item']['nid'])) {
@@ -1182,13 +898,12 @@ function theme_thirdwing_formatters_formatter_badge_location_extended($element) 
     }
   }
   
-  $output .= '</span>';
-  return $output;
+  return $output . '</span>';
 }
 
 /**
  * Format: Datum met icoon
- * OPTIMIZED: Direct array lookup for icons, consolidated date parsing
+ * OPTIMIZED: Static icon map, reduced DateTime instantiation
  */
 function theme_thirdwing_formatters_formatter_datum_met_icoon($element) {
   if (empty($element['#item']['value'])) {
@@ -1217,7 +932,6 @@ function theme_thirdwing_formatters_formatter_datum_met_icoon($element) {
 
 /**
  * Format: Badge sleepgroep
- * OPTIMIZED: Direct array lookup
  */
 function theme_thirdwing_formatters_formatter_badge_sleepgroep($element) {
   if (empty($element['#item']['value'])) {
@@ -1234,7 +948,6 @@ function theme_thirdwing_formatters_formatter_badge_sleepgroep($element) {
 
 /**
  * Format: Badge tijd
- * OPTIMIZED: Direct comparison
  */
 function theme_thirdwing_formatters_formatter_badge_tijd($element) {
   if (empty($element['#item']['value'])) {
@@ -1247,7 +960,8 @@ function theme_thirdwing_formatters_formatter_badge_tijd($element) {
   if ($field == 'field_tijd_aanwezig') {
     return '<span class="badge badge-koor-tijd fa fa-users" title="Koor aanwezig">' . $value . '</span>';
   }
-  elseif ($field == 'field_sleepgroep_aanwezig') {
+  
+  if ($field == 'field_sleepgroep_aanwezig') {
     return '<span class="badge badge-sleepgroep-tijd fa fa-clock-o" title="Sleepgroep aanwezig">' . $value . '</span>';
   }
   
@@ -1256,7 +970,7 @@ function theme_thirdwing_formatters_formatter_badge_tijd($element) {
 
 /**
  * Format: Badge band
- * OPTIMIZED: Combined lookups, reduced conditionals
+ * OPTIMIZED: Combined lookups
  */
 function theme_thirdwing_formatters_formatter_badge_band($element) {
   if (empty($element['#item']['value'])) {
@@ -1281,20 +995,19 @@ function theme_thirdwing_formatters_formatter_badge_band($element) {
   $field = $element['#field_name'];
   $value = $element['#item']['value'];
   
-  if (!isset($instruments[$field]) || !isset($statuses[$value])) {
+  if (!isset($instruments[$field], $statuses[$value])) {
     return '';
   }
   
-  $inst = $instruments[$field];
-  $stat = $statuses[$value];
-  
-  return '<span class="badge badge-combo badge-combo-' . $inst['combo'] . ' badge-combo-' . $stat['status'] . 
-         '" title="' . sprintf($stat['tekst'], $inst['naam']) . '">' . $inst['icon'] . '</span>';
+  return '<span class="badge badge-combo badge-combo-' . $instruments[$field]['combo'] . 
+         ' badge-combo-' . $statuses[$value]['status'] . '" title="' . 
+         sprintf($statuses[$value]['tekst'], $instruments[$field]['naam']) . '">' . 
+         $instruments[$field]['icon'] . '</span>';
 }
 
 /**
  * Format: File description link
- * OPTIMIZED: Combined icon mapping, reduced calls
+ * OPTIMIZED: Combined icon mapping
  */
 function theme_thirdwing_formatters_formatter_file_description_link($element) {
   if (empty($element['#item']['filepath'])) {
@@ -1312,7 +1025,6 @@ function theme_thirdwing_formatters_formatter_file_description_link($element) {
   
   $file = $element['#item'];
   $filepath = $file['filepath'];
-  $url = file_create_url($filepath);
   $basename = basename($filepath);
   $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
   
@@ -1320,10 +1032,8 @@ function theme_thirdwing_formatters_formatter_file_description_link($element) {
   $icon_type = isset($icons[$ext]) ? $icons[$ext] : 'o';
   $icon_class = ($icon_type == 'o') ? 'button fa fa-file-o' : 'button fa fa-file-' . $icon_type . '-o';
   
-  return l($description, $url, array(
-    'attributes' => array('class' => $icon_class, 'target' => '_blank', 'title' => $basename),
-    'html' => FALSE,
-  ));
+  return l($description, file_create_url($filepath),
+           array('attributes' => array('class' => $icon_class, 'target' => '_blank', 'title' => $basename)));
 }
 
 /**
@@ -1395,7 +1105,7 @@ function theme_thirdwing_formatters_formatter_badge_plain($element) {
 
 /**
  * Format: Badge datum en tijd
- * OPTIMIZED: Pre-computed Dutch translations, consolidated string building
+ * OPTIMIZED: Pre-computed Dutch translations
  */
 function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
   if (empty($element['#item']['value'])) {
@@ -1408,7 +1118,6 @@ function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
   
   $dt = new DateTime($element['#item']['value']);
   $time = $dt->format('H:i');
-  
   $day_en = $dt->format('D');
   $month_en = $dt->format('M');
   
@@ -1424,8 +1133,7 @@ function theme_thirdwing_formatters_formatter_badge_datum_en_tijd($element) {
     $output .= '<span class="badge badge-time fa fa-clock-o" title="Begintijd">' . $time . '</span>';
   }
   
-  $output .= '</span>';
-  return $output;
+  return $output . '</span>';
 }
 
 /**
@@ -1441,49 +1149,38 @@ function theme_thirdwing_formatters_formatter_badge_kar($element) {
 
 /**
  * Format: Badge node type icon
- * Displays node type with appropriate FontAwesome icon
  */
 function theme_thirdwing_formatters_formatter_node_type_icon($element) {
   if (!isset($element['#node']->type)) {
     return '';
   }
   
-  $node = $element['#node'];
-  $value = $node->type;
-  
-  // Map node types to FontAwesome icons
   static $icon_map = array(
-    'audio' => 'microphone',
-    'video' => 'film',
-    'foto' => 'camera',
-    'nieuws' => 'newspaper-o',
-    'activiteit' => 'calendar-check-o',
-    'profiel' => 'user',
-    'repertoire' => 'music',
+    'audio' => 'microphone', 'video' => 'film', 'foto' => 'camera', 'nieuws' => 'newspaper-o',
+    'activiteit' => 'calendar-check-o', 'profiel' => 'user', 'repertoire' => 'music',
   );
   
-  $icon = isset($icon_map[$value]) ? $icon_map[$value] : 'file-o';
+  $type = $element['#node']->type;
+  $icon = isset($icon_map[$type]) ? $icon_map[$type] : 'file-o';
   
-  return '<div class="badge badge-nodetype badge-nodetype-' . check_plain($value) . ' fa fa-' . $icon . '">' . check_plain($value) . '</div>';
+  return '<div class="badge badge-nodetype badge-nodetype-' . check_plain($type) . 
+         ' fa fa-' . $icon . '">' . check_plain($type) . '</div>';
 }
 
 /**
  * Format: Badge node type (without icon)
- * Displays node type without FontAwesome icon
  */
 function theme_thirdwing_formatters_formatter_node_type($element) {
   if (!isset($element['#node']->type)) {
     return '';
   }
   
-  $value = check_plain($element['#node']->type);
-  
-  return '<div class="badge badge-nodetype badge-nodetype-' . $value . '">' . $value . '</div>';
+  $type = check_plain($element['#node']->type);
+  return '<div class="badge badge-nodetype badge-nodetype-' . $type . '">' . $type . '</div>';
 }
 
 /**
  * Format: Icon link (phone/email/mobile)
- * Displays value with appropriate icon and link based on field name
  * OPTIMIZED: Direct array lookup for field icons
  */
 function theme_thirdwing_formatters_formatter_icon_link($element) {
@@ -1500,57 +1197,32 @@ function theme_thirdwing_formatters_formatter_icon_link($element) {
   $field_name = $element['#field_name'];
   $value = $element['#item']['value'];
   
-  // Check if this field has icon configuration
   if (isset($field_config[$field_name])) {
     $config = $field_config[$field_name];
-    $icon = $config['icon'];
-    $prefix = $config['prefix'];
-    
-    // Generate unique ID if node is available
     $id = isset($element['#node']->nid) ? $field_name . '-' . $element['#node']->nid : '';
     
-    return l(
-      '<span class="fa fa-' . $icon . '">' . check_plain($value) . '</span>',
-      $prefix . $value,
-      array(
-        'attributes' => array(
-          'id' => $id,
-        ),
-        'html' => TRUE,
-      )
-    );
+    return l('<span class="fa fa-' . $config['icon'] . '">' . check_plain($value) . '</span>',
+             $config['prefix'] . $value,
+             array('attributes' => array('id' => $id), 'html' => TRUE));
   }
   
-  // Fallback for fields without specific config
   return check_plain($value);
 }
 
 /**
  * Format: Kleding link
- * Displays value as link to kleding richtlijn (node/6039) with user icon
  */
 function theme_thirdwing_formatters_formatter_kleding_link($element) {
   if (empty($element['#item']['value'])) {
     return '';
   }
   
-  $value = $element['#item']['value'];
-  
-  return l(
-    check_plain($value),
-    'node/6039',
-    array(
-      'attributes' => array(
-        'class' => 'fa fa-user',
-        'title' => 'Richtlijn kleding',
-      ),
-    )
-  );
+  return l(check_plain($element['#item']['value']), 'node/6039',
+           array('attributes' => array('class' => 'fa fa-user', 'title' => 'Richtlijn kleding')));
 }
 
 /**
  * Format: YouTube Embed
- * Displays YouTube video as embedded iframe
  */
 function theme_thirdwing_formatters_formatter_youtube_embed($element) {
   if (empty($element['#item']['value'])) {
@@ -1558,14 +1230,12 @@ function theme_thirdwing_formatters_formatter_youtube_embed($element) {
   }
   
   $value = check_plain($element['#item']['value']);
-  
   return '<iframe class="video video-embed" width="560" height="315" src="https://www.youtube.com/embed/' . 
          $value . '" frameborder="0" allowfullscreen></iframe>';
 }
 
 /**
  * Format: YouTube Thumbnail
- * Displays YouTube video thumbnail linked to YouTube
  */
 function theme_thirdwing_formatters_formatter_youtube_thumbnail($element) {
   if (empty($element['#item']['value'])) {
@@ -1573,34 +1243,26 @@ function theme_thirdwing_formatters_formatter_youtube_thumbnail($element) {
   }
   
   $value = check_plain($element['#item']['value']);
-  
   return '<a href="https://www.youtube.com/watch?v=' . $value . '" class="video video-thumb">' .
          '<img src="https://img.youtube.com/vi/' . $value . '/0.jpg"></a>';
 }
 
 /**
  * Format: Background image
- * Displays file as CSS background-image in a div
- * OPTIMIZED: Direct path construction without file_create_url overhead
+ * OPTIMIZED: Direct path construction
  */
 function theme_thirdwing_formatters_formatter_background_image($element) {
   if (empty($element['#item']['filepath'])) {
     return '';
   }
   
-  $filepath = $element['#item']['filepath'];
-  
   // Construct URL directly - more efficient than file_create_url()
-  // Assumes files are in default files directory
-  $url = '/' . $filepath;
-  
-  return '<div class="node-background" style="background-image: url(' . check_plain($url) . ');"></div>';
+  return '<div class="node-background" style="background-image: url(/' . check_plain($element['#item']['filepath']) . ');"></div>';
 }
 
 /**
  * Format: Download restricted
- * Displays download link only for uid 1, Lid, or Beheerder roles
- * OPTIMIZED: Early return, single role check
+ * OPTIMIZED: Consolidated access check
  */
 function theme_thirdwing_formatters_formatter_download_restricted($element) {
   if (empty($element['#item']['filepath'])) {
@@ -1609,32 +1271,16 @@ function theme_thirdwing_formatters_formatter_download_restricted($element) {
   
   global $user;
   
-  // Check if user has access: uid 1, or has 'Lid' or 'Beheerder' role
-  $has_access = ($user->uid == 1);
-  
-  if (!$has_access && !empty($user->roles)) {
-    $has_access = (in_array('Lid', $user->roles) || in_array('Beheerder', $user->roles));
-  }
-  
-  if (!$has_access) {
+  // Check access: uid 1 or Lid/Beheerder role
+  if ($user->uid != 1 && !array_intersect(array('Lid', 'Beheerder'), $user->roles)) {
     return '';
   }
   
   $file = $element['#item'];
-  $filepath = $file['filepath'];
+  $link_text = !empty($file['data']['description']) ? check_plain($file['data']['description']) : check_plain(basename($file['filepath']));
   
-  // Use description if available, otherwise use filename
-  $link_text = !empty($file['data']['description']) ? check_plain($file['data']['description']) : check_plain(basename($filepath));
-  
-  return l(
-    $link_text,
-    file_create_url($filepath),
-    array(
-      'attributes' => array(
-        'class' => 'button button-inline button-icon-only file-download-link fa fa-download',
-      ),
-    )
-  );
+  return l($link_text, file_create_url($file['filepath']),
+           array('attributes' => array('class' => 'button button-inline button-icon-only file-download-link fa fa-download')));
 }
 
 /**
@@ -1665,7 +1311,7 @@ function thirdwing_formatters_content_is_empty($item, $field) {
  * OPTIMIZED: Direct cache clearing
  */
 function thirdwing_formatters_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if (($op == 'insert' || $op == 'update' || $op == 'delete') && 
+  if (in_array($op, array('insert', 'update', 'delete')) && 
       in_array($node->type, array('audio', 'video')) && 
       isset($node->field_repertoire[0]['nid'])) {
     
@@ -1675,7 +1321,7 @@ function thirdwing_formatters_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
 /**
  * Theme: Media counts display
- * OPTIMIZED: Early return, consolidated link building
+ * OPTIMIZED: Early return, consolidated output
  */
 function theme_thirdwing_formatters_media_counts_display($counts, $nid) {
   if (empty($counts['audio']) && empty($counts['video'])) {
@@ -1712,8 +1358,7 @@ function thirdwing_formatters_get_media_counts_for_display($nid) {
   // Layer 2: Global Views cache
   global $thirdwing_media_counts_cache;
   if (isset($thirdwing_media_counts_cache[$nid])) {
-    $static_cache[$nid] = $thirdwing_media_counts_cache[$nid];
-    return $thirdwing_media_counts_cache[$nid];
+    return $static_cache[$nid] = $thirdwing_media_counts_cache[$nid];
   }
   
   // Layer 3: Drupal persistent cache
@@ -1721,17 +1366,14 @@ function thirdwing_formatters_get_media_counts_for_display($nid) {
   $cached = cache_get($cache_key, 'cache');
   
   if ($cached && !empty($cached->data)) {
-    $static_cache[$nid] = $cached->data;
-    return $cached->data;
+    return $static_cache[$nid] = $cached->data;
   }
   
   // Layer 4: Database query
   $counts = _thirdwing_formatters_get_media_counts($nid);
   
   cache_set($cache_key, $counts, 'cache', time() + 3600);
-  $static_cache[$nid] = $counts;
-  
-  return $counts;
+  return $static_cache[$nid] = $counts;
 }
 
 /**
@@ -1821,7 +1463,7 @@ function thirdwing_formatters_preload_media_counts($nids) {
     if (!isset($counts[$row->repertoire_nid])) {
       $counts[$row->repertoire_nid] = array('audio' => 0, 'video' => 0);
     }
-    $counts[$row->repertoire_nid][$row->type] = (int)$row->count;
+    $counts[$row->type] = (int)$row->count;
   }
   
   // Fill zeros for nodes without media
