@@ -199,6 +199,9 @@ function thirdwing_formatters_theme() {
   $themes['thirdwing_formatters_ds_node_type_badge'] = array(
     'arguments' => array('field' => NULL),
   );
+  $themes['thirdwing_formatters_ds_oefenmateriaal_default'] = array(
+    'arguments' => array('field' => NULL),
+  );
   
   return $themes;
 }
@@ -240,21 +243,18 @@ function thirdwing_formatters_ds_fields($type_name, $build_mode = NULL, $extra =
     ),
   );
   
-  // Media counts field for repertoire only
+  // Oefenmateriaal field - ONLY for repertoire
   if ($type_name == 'repertoire') {
-    $fields['media_counts'] = array(
-      'title' => t('Media Counts'),
-      'type' => DS_FIELD_TYPE_FUNCTION,
+    $fields['oefenmateriaal'] = array(
+      'title' => t('Oefenmateriaal'),
+      'type' => DS_FIELD_TYPE_THEME,
       'status' => DS_FIELD_STATUS_STATIC,
       'properties' => array(
-        'function' => 'thirdwing_formatters_ds_render_media_counts',
-        'formatters' => array('default' => t('Default (buttons)')),
+        'formatters' => array(
+          'thirdwing_formatters_ds_oefenmateriaal_default' => t('Default (buttons)'),
+        ),
       ),
     );
-  }
-  
-  if (empty($fields)) {
-    return array();
   }
   
   return array('nd' => $fields);
@@ -337,25 +337,38 @@ function theme_thirdwing_formatters_ds_node_type_badge($field) {
 }
 
 /**
- * Display Suite render callback for media counts.
- * OPTIMIZED: Simplified node extraction
+ * Theme function: Oefenmateriaal default (Display Suite).
+ * 
+ * Displays media count buttons for repertoire nodes.
+ * OPTIMIZED: Uses preloaded counts from Views when available.
+ * 
+ * @param array $field
+ *   The field array from Display Suite containing $field['object'] with the node.
+ *   
+ * @return string
+ *   The formatted output.
  */
-function thirdwing_formatters_ds_render_media_counts($field) {
-  $node = NULL;
-  
-  if (is_object($field) && isset($field->nid)) {
-    $node = $field;
-  }
-  elseif (is_array($field)) {
-    $node = isset($field['object']) ? $field['object'] : (isset($field['node']) ? $field['node'] : NULL);
-  }
-  
-  if (!$node || !isset($node->nid)) {
+function theme_thirdwing_formatters_ds_oefenmateriaal_default($field) {
+  if (!isset($field['object']->nid)) {
     return '';
   }
   
-  $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+  $node = $field['object'];
   
+  if (!isset($node->type) || $node->type != 'repertoire') {
+    return '';
+  }
+  
+  // PERFORMANCE OPTIMIZATION: Check if counts were already preloaded by Views
+  global $thirdwing_media_counts_cache;
+  if (isset($thirdwing_media_counts_cache[$node->nid])) {
+    $counts = $thirdwing_media_counts_cache[$node->nid];
+  }
+  else {
+    $counts = thirdwing_formatters_get_media_counts_for_display($node->nid);
+  }
+  
+  // Don't display if no media
   if (empty($counts['audio']) && empty($counts['video'])) {
     return '';
   }
